@@ -53,7 +53,26 @@ export default {
               "on-primary": "#ffffff",
               "on-secondary-fixed": "#221a0f",
               "tertiary-fixed": "#fcdbde",
-              "on-error": "#ffffff"
+              "on-error": "#ffffff",
+              "brand-pink": "#E91E63",
+              "brand-light": "#FFF5F7",
+              "brand-gold": "#FFD54F"
+      },
+      "animation": {
+              "float": "float 6s ease-in-out infinite",
+              "float-delayed": "float 6s ease-in-out 3s infinite",
+              "pulse-slow": "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+              "slide": "slide 20s linear infinite",
+      },
+      "keyframes": {
+              float: {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-20px)' },
+              },
+              slide: {
+                '0%': { transform: 'translateX(0)' },
+                '100%': { transform: 'translateX(-50%)' },
+              }
       },
       "borderRadius": {
               "DEFAULT": "0.25rem",
@@ -70,6 +89,8 @@ export default {
               "margin-mobile": "20px"
       },
       "fontFamily": {
+              "poppins": ["Poppins", "sans-serif"],
+              "inter": ["Inter", "sans-serif"],
               "headline-xl-mobile": ["Playfair Display"],
               "body-sm": ["Montserrat"],
               "body-md": ["Montserrat"],

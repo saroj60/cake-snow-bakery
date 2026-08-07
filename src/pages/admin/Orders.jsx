@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, MapPin, Phone, Edit, MessageCircle, ExternalLink } from 'lucide-react';
 import { getOrders, saveOrder } from '../../services/db';
 
@@ -8,16 +8,16 @@ const Orders = () => {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
-
   const fetchOrders = async () => {
     setIsLoading(true);
     const data = await getOrders();
     setOrders(data);
     setIsLoading(false);
   };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
   const handleStatusChange = async (order, newStatus) => {
     const updatedOrder = { ...order, status: newStatus };
@@ -26,9 +26,12 @@ const Orders = () => {
   };
 
   const filteredOrders = orders.filter(o => {
+    const customerName = o.isCustomOrder ? o.customerName : (o.customer?.name || '');
+    const customerPhone = o.isCustomOrder ? o.customerPhone : (o.customer?.phone || '');
+    
     const matchesSearch = o.id.toLowerCase().includes(search.toLowerCase()) || 
-                          o.customer.name.toLowerCase().includes(search.toLowerCase()) ||
-                          o.customer.phone.includes(search);
+                          customerName.toLowerCase().includes(search.toLowerCase()) ||
+                          customerPhone.includes(search);
     const matchesFilter = filter === 'All' || o.status === filter;
     return matchesSearch && matchesFilter;
   });
@@ -40,6 +43,7 @@ const Orders = () => {
       case 'Baking': return 'bg-purple-100 text-purple-700 border-purple-200';
       case 'Out for delivery': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
       case 'Delivered': return 'bg-green-100 text-green-700 border-green-200';
+      case 'Cancelled': return 'bg-red-100 text-red-700 border-red-200';
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
@@ -63,7 +67,7 @@ const Orders = () => {
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
           </div>
           <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
-            {['All', 'Pending', 'Confirmed', 'Baking', 'Out for delivery', 'Delivered'].map(status => (
+            {['All', 'Pending', 'Confirmed', 'Baking', 'Out for delivery', 'Delivered', 'Cancelled'].map(status => (
               <button 
                 key={status}
                 onClick={() => setFilter(status)}
@@ -89,9 +93,14 @@ const Orders = () => {
                   <div>
                     <h3 className="font-bold text-primary flex items-center gap-2">
                       {order.id} 
+                      {order.isCustomOrder && (
+                        <span className="bg-purple-100 text-purple-700 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">Custom</span>
+                      )}
                       <span className="text-xs font-normal text-on-surface-variant">{new Date(order.createdAt).toLocaleString()}</span>
                     </h3>
-                    <p className="font-medium text-lg">Rs. {order.total.toFixed(2)}</p>
+                    <p className="font-medium text-lg">
+                      {order.isCustomOrder ? 'Price TBD' : `Rs. ${order.total?.toFixed(2)}`}
+                    </p>
                   </div>
                   <select 
                     value={order.status}
@@ -103,24 +112,27 @@ const Orders = () => {
                     <option value="Baking">Baking</option>
                     <option value="Out for delivery">Out for delivery</option>
                     <option value="Delivered">Delivered</option>
+                    <option value="Cancelled">Cancelled</option>
                   </select>
                 </div>
 
                 {/* Customer Details */}
                 <div className="mb-4 flex-1">
                   <h4 className="text-sm font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Customer</h4>
-                  <p className="font-medium text-on-surface">{order.customer.name}</p>
-                  <p className="text-sm flex items-center gap-2 text-on-surface-variant mt-1"><Phone size={14} /> {order.customer.phone}</p>
-                  <p className="text-sm flex items-start gap-2 text-on-surface-variant mt-1">
-                    <MapPin size={14} className="mt-1 flex-shrink-0" /> 
-                    <span className="line-clamp-2">{order.customer.address}</span>
-                  </p>
-                  {order.customer.lat && order.customer.lng && (
+                  <p className="font-medium text-on-surface">{order.isCustomOrder ? order.customerName : order.customer?.name}</p>
+                  <p className="text-sm flex items-center gap-2 text-on-surface-variant mt-1"><Phone size={14} /> {order.isCustomOrder ? order.customerPhone : order.customer?.phone}</p>
+                  {!order.isCustomOrder && order.customer?.address && (
+                    <p className="text-sm flex items-start gap-2 text-on-surface-variant mt-1">
+                      <MapPin size={14} className="mt-1 flex-shrink-0" /> 
+                      <span className="line-clamp-2">{order.customer.address}</span>
+                    </p>
+                  )}
+                  {!order.isCustomOrder && order.customer?.lat && order.customer?.lng && (
                     <a href={`https://www.openstreetmap.org/?mlat=${order.customer.lat}&mlon=${order.customer.lng}`} target="_blank" rel="noreferrer" className="text-xs text-primary mt-1 ml-5 inline-flex items-center gap-1 hover:underline">
                       View on Map <ExternalLink size={10} />
                     </a>
                   )}
-                  {order.customer.notes && (
+                  {!order.isCustomOrder && order.customer?.notes && (
                     <div className="mt-3 bg-surface-container p-2 rounded-lg border border-outline-variant/20">
                       <p className="text-xs font-semibold text-primary mb-1">Notes:</p>
                       <p className="text-sm text-on-surface-variant italic">"{order.customer.notes}"</p>
@@ -128,37 +140,56 @@ const Orders = () => {
                   )}
                 </div>
 
-                {/* Items */}
+                {/* Items / Custom Details */}
                 <div className="mb-4">
-                  <h4 className="text-sm font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Items</h4>
-                  <ul className="space-y-1">
-                    {order.items.map((item, idx) => (
-                      <li key={idx} className="text-sm flex flex-col gap-1 pb-2 border-b border-outline-variant/10 last:border-0 last:pb-0">
-                        <div className="flex justify-between items-start">
-                          <div className="flex gap-2 items-start">
-                            {item.image ? (
-                              <img src={item.image} alt={item.name} className="w-10 h-10 object-cover rounded bg-surface-variant flex-shrink-0" />
-                            ) : (
-                              <div className="w-10 h-10 bg-surface-variant rounded flex-shrink-0"></div>
-                            )}
-                            <div className="flex flex-col">
-                              <span><span className="font-medium">{item.quantity}x</span> {item.name}</span>
-                              {item.messageOnCake && (
-                                <span className="text-xs italic text-on-surface-variant mt-0.5">Msg: "{item.messageOnCake}"</span>
+                  <h4 className="text-sm font-semibold text-on-surface-variant uppercase tracking-wider mb-2">
+                    {order.isCustomOrder ? 'Custom Order Details' : 'Items'}
+                  </h4>
+                  
+                  {order.isCustomOrder ? (
+                    <div className="space-y-2 text-sm">
+                      {order.referenceImage && (
+                        <a href={order.referenceImage} target="_blank" rel="noreferrer" className="block w-full h-32 rounded-lg overflow-hidden border border-outline-variant/20 mb-3 hover:opacity-90 transition-opacity">
+                          <img src={order.referenceImage} alt="Reference" className="w-full h-full object-cover" />
+                        </a>
+                      )}
+                      <p><span className="font-medium">Flavor:</span> {order.flavor}</p>
+                      <p><span className="font-medium">Shape:</span> {order.shape}</p>
+                      <p><span className="font-medium">Size:</span> {order.size}</p>
+                      <p><span className="font-medium">Theme:</span> {order.theme}</p>
+                      {order.message && <p><span className="font-medium">Message:</span> {order.message}</p>}
+                      <p><span className="font-medium">Needed by:</span> {new Date(order.deliveryDate).toLocaleDateString()}</p>
+                    </div>
+                  ) : (
+                    <ul className="space-y-1">
+                      {order.items?.map((item, idx) => (
+                        <li key={idx} className="text-sm flex flex-col gap-1 pb-2 border-b border-outline-variant/10 last:border-0 last:pb-0">
+                          <div className="flex justify-between items-start">
+                            <div className="flex gap-2 items-start">
+                              {item.image ? (
+                                <img src={item.image} alt={item.name} className="w-10 h-10 object-cover rounded bg-surface-variant flex-shrink-0" />
+                              ) : (
+                                <div className="w-10 h-10 bg-surface-variant rounded flex-shrink-0"></div>
                               )}
+                              <div className="flex flex-col">
+                                <span><span className="font-medium">{item.quantity}x</span> {item.name}</span>
+                                {item.messageOnCake && (
+                                  <span className="text-xs italic text-on-surface-variant mt-0.5">Msg: "{item.messageOnCake}"</span>
+                                )}
+                              </div>
                             </div>
+                            <span className="text-on-surface-variant mt-1">Rs. {(item.price * item.quantity).toFixed(2)}</span>
                           </div>
-                          <span className="text-on-surface-variant mt-1">Rs. {(item.price * item.quantity).toFixed(2)}</span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
 
                 {/* Actions */}
                 <div className="mt-auto pt-4 border-t border-outline-variant/20 flex gap-2">
                   <a 
-                    href={`https://wa.me/${order.customer.phone.replace(/[^0-9]/g, '')}?text=Hello ${order.customer.name}, this is Snow Cakes! We are updating you regarding your order ${order.id}.`}
+                    href={`https://wa.me/${(order.isCustomOrder ? order.customerPhone : order.customer?.phone)?.replace(/[^0-9]/g, '')}?text=Hello ${order.isCustomOrder ? order.customerName : order.customer?.name}, this is Snow Cakes! We are updating you regarding your order ${order.id}.`}
                     target="_blank" rel="noreferrer"
                     className="flex-1 bg-[#25D366]/10 text-[#128C7E] py-2 rounded-lg flex items-center justify-center gap-2 font-medium hover:bg-[#25D366]/20 transition-colors"
                   >

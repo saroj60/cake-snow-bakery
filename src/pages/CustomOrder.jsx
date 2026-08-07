@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Camera, Calendar, MessageSquare, Send } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { submitCustomOrder } from '../services/db';
 
 const CustomOrder = () => {
   const [formData, setFormData] = useState({
@@ -9,10 +11,13 @@ const CustomOrder = () => {
     theme: '',
     message: '',
     deliveryDate: '',
+    customerName: '',
+    customerPhone: '',
     image: null,
   });
 
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
@@ -23,26 +28,50 @@ const CustomOrder = () => {
     }
   };
 
-  const ADMIN_PHONE = '9779860568012';
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     
-    let message = `*NEW CUSTOM ORDER REQUEST* 🎂\n\n`;
-    message += `*Flavor:* ${formData.flavor}\n`;
-    message += `*Shape:* ${formData.shape}\n`;
-    message += `*Size:* ${formData.size}\n`;
-    message += `*Theme/Concept:* ${formData.theme}\n`;
-    if (formData.message) message += `*Message on Cake:* ${formData.message}\n`;
-    message += `*Delivery Date:* ${formData.deliveryDate}\n`;
-    if (formData.image) message += `*(I will send a reference image in this chat)*\n`;
-    message += `\nPlease let me know the price and if this design is possible!`;
+    try {
+      const orderData = {
+        customerName: formData.customerName,
+        customerPhone: formData.customerPhone,
+        flavor: formData.flavor,
+        size: formData.size,
+        shape: formData.shape,
+        theme: formData.theme,
+        message: formData.message,
+        deliveryDate: formData.deliveryDate,
+      };
+      
+      const imageFile = formData.image;
+      
+      // Submit custom order saves it to the DB with the uploaded image URL
+      const response = await submitCustomOrder(orderData, imageFile);
+      
+      // We don't get the image URL back directly from the mock wrapper without changing too much, 
+      // but we can generate the WhatsApp message with the details anyway.
+      const ADMIN_PHONE = '9779860568012';
+      let message = `*NEW CUSTOM ORDER REQUEST* 🎂\n\n`;
+      message += `*Customer Details:*\nName: ${formData.customerName}\nPhone: ${formData.customerPhone}\n\n`;
+      message += `*Cake Specifications:*\nFlavor: ${formData.flavor}\nSize: ${formData.size}\nShape: ${formData.shape}\n`;
+      if (formData.theme) message += `Theme/Colors: ${formData.theme}\n`;
+      if (formData.message) message += `Message on Cake: "${formData.message}"\n`;
+      message += `Delivery Date: ${formData.deliveryDate}\n\n`;
+      message += `(I have also uploaded a reference image on your website. Please check the Admin Panel for the photo.)\n\n`;
+      message += `Please review and let me know the pricing!`;
 
-    const whatsappUrl = `https://wa.me/${ADMIN_PHONE}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
-
-    setIsSubmitted(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+      const whatsappUrl = `https://wa.me/${ADMIN_PHONE}?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
+      
+      setIsSubmitted(true);
+      toast.success('Custom order request sent successfully!');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error) {
+      toast.error('Failed to submit request. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isSubmitted) {
@@ -57,7 +86,7 @@ const CustomOrder = () => {
             Thank you for your custom order request. Our head baker will review your details and contact you shortly to confirm the design and pricing.
           </p>
           <button 
-            onClick={() => { setIsSubmitted(false); setFormData({ flavor: '', size: '', shape: '', theme: '', message: '', deliveryDate: '', image: null }); }}
+            onClick={() => { setIsSubmitted(false); setFormData({ flavor: '', size: '', shape: '', theme: '', message: '', deliveryDate: '', customerName: '', customerPhone: '', image: null }); }}
             className="w-full py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-all"
           >
             Submit Another Request
@@ -91,12 +120,34 @@ const CustomOrder = () => {
                 <label className="block text-sm font-medium text-on-surface mb-2">Cake Flavor *</label>
                 <select name="flavor" required value={formData.flavor} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-surface-container-low border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none">
                   <option value="">Select Flavor</option>
-                  <option value="Chocolate Fudge">Chocolate Fudge</option>
-                  <option value="Vanilla Bean">Vanilla Bean</option>
-                  <option value="Red Velvet">Red Velvet</option>
-                  <option value="Strawberry Cream">Strawberry Cream</option>
-                  <option value="Lemon Buttercream">Lemon Buttercream</option>
                   <option value="Black Forest">Black Forest</option>
+                  <option value="White Forest">White Forest</option>
+                  <option value="Vanilla">Vanilla</option>
+                  <option value="Chocolate">Chocolate</option>
+                  <option value="Strawberry">Strawberry</option>
+                  <option value="Blueberry">Blueberry</option>
+                  <option value="Butterscotch">Butterscotch</option>
+                  <option value="Mango">Mango</option>
+                  <option value="Orange">Orange</option>
+                  <option value="Pineapple">Pineapple</option>
+                  <option value="Mocha">Mocha</option>
+                  <option value="Kiwi">Kiwi</option>
+                  <option value="Mix Fruit">Mix Fruit</option>
+                  <option value="Choco Chips">Choco Chips</option>
+                  <option value="Red Velvet">Red Velvet</option>
+                  <option value="Truffle (White)">Truffle (White)</option>
+                  <option value="Truffle (Black)">Truffle (Black)</option>
+                  <option value="Opera">Opera</option>
+                  <option value="Italian">Italian</option>
+                  <option value="Double Chocolate">Double Chocolate</option>
+                  <option value="Tres Leches">Tres Leches</option>
+                  <option value="Cake Snow Special">Cake Snow Special</option>
+                  <option value="Sugarpaste with Cream">Sugarpaste with Cream</option>
+                  <option value="Sugarpaste">Sugarpaste</option>
+                  <option value="Brownie Cake">Brownie Cake</option>
+                  <option value="Cheesecake (Vanilla)">Cheesecake (Vanilla)</option>
+                  <option value="Cheesecake (All Flavours)">Cheesecake (All Flavours)</option>
+                  <option value="Choco Lava Cake">Choco Lava Cake</option>
                 </select>
               </div>
               
@@ -126,10 +177,45 @@ const CustomOrder = () => {
             </div>
           </div>
 
-          {/* Section 2: Design & Theme */}
+          {/* Section 1.5: Contact Details */}
           <div>
             <h3 className="text-xl font-bold text-primary mb-6 flex items-center gap-2 border-b border-outline-variant/30 pb-2">
               <span className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm">2</span>
+              Contact Details
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-on-surface mb-2">Your Name *</label>
+                <input 
+                  type="text" 
+                  name="customerName" 
+                  required
+                  value={formData.customerName} 
+                  onChange={handleChange} 
+                  placeholder="e.g. John Doe"
+                  className="w-full px-4 py-3 rounded-xl bg-surface-container-low border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-on-surface mb-2">Phone Number *</label>
+                <input 
+                  type="tel" 
+                  name="customerPhone" 
+                  required
+                  value={formData.customerPhone} 
+                  onChange={handleChange} 
+                  placeholder="e.g. 9812345678"
+                  className="w-full px-4 py-3 rounded-xl bg-surface-container-low border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Design & Theme */}
+          <div>
+            <h3 className="text-xl font-bold text-primary mb-6 flex items-center gap-2 border-b border-outline-variant/30 pb-2">
+              <span className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm">3</span>
               Design & Inspiration
             </h3>
             
@@ -166,7 +252,7 @@ const CustomOrder = () => {
           {/* Section 3: Final Details */}
           <div>
             <h3 className="text-xl font-bold text-primary mb-6 flex items-center gap-2 border-b border-outline-variant/30 pb-2">
-              <span className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm">3</span>
+              <span className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm">4</span>
               Final Touches
             </h3>
             
@@ -203,9 +289,9 @@ const CustomOrder = () => {
           </div>
 
           <div className="pt-6 border-t border-outline-variant/30">
-            <button type="submit" className="w-full py-4 bg-primary text-white rounded-xl font-bold text-lg hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex justify-center items-center gap-2">
+            <button type="submit" disabled={isSubmitting} className="w-full py-4 bg-primary text-white rounded-xl font-bold text-lg hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex justify-center items-center gap-2">
               <Send size={20} />
-              Submit Request
+              {isSubmitting ? 'Submitting...' : 'Submit Request'}
             </button>
             <p className="text-center text-xs text-on-surface-variant mt-4">
               Submitting this form does not guarantee an order. We will contact you to confirm details and provide a quote.

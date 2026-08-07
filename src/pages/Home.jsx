@@ -1,8 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { getProducts } from '../services/db';
 import { useCart } from '../context/CartContext';
-import { ShoppingBag, Star, ArrowRight, Sparkles, MessageCircle, Clock, Heart } from 'lucide-react';
+import { ShoppingBag, Star, ArrowRight, Sparkles, MessageCircle, Clock, Heart, BadgeCheck } from 'lucide-react';
+import toast from 'react-hot-toast';
+import Hero from '../components/Hero';
+import WhyChooseUs from '../components/WhyChooseUs';
+import UpcomingCelebrations from '../components/UpcomingCelebrations';
+import PromotionalBanner from '../components/PromotionalBanner';
+import ScrollReveal from '../components/ScrollReveal';
+import SEO from '../components/SEO';
 
 const SHOWCASE_CAKES = [
   {
@@ -43,26 +50,78 @@ const SHOWCASE_CAKES = [
   }
 ];
 
+const FEATURED_COLLECTIONS = [
+  { id: 'birthday', title: 'Birthday Specials', query: 'birthday', image: 'https://images.unsplash.com/photo-1558301211-0d8c8ddee6ec?w=800&q=80' },
+  { id: 'anniversary', title: 'Anniversary Cakes', query: 'anniversary', image: 'https://images.unsplash.com/photo-1535254973040-607b474cb50d?w=800&q=80' },
+  { id: 'photo', title: 'Custom Photo Cakes', query: 'photo', image: 'https://images.unsplash.com/photo-1562777717-dc6984f65a63?w=800&q=80' },
+  { id: 'kids', title: 'Kids Favorites', query: 'kids', image: 'https://images.unsplash.com/photo-1587314168485-3236d6710814?w=800&q=80' },
+  { id: 'premium', title: 'Premium Designs', query: 'premium', image: 'https://images.unsplash.com/photo-1621236378699-8597faf6a176?w=800&q=80' }
+];
+
 const Home = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const searchQuery = searchParams.get('q') || '';
   const categoryQuery = searchParams.get('category');
   const [cakes, setCakes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { addToCart } = useCart();
+  const { addToCart, setIsCartOpen } = useCart();
   const [selectedShowcaseIndex, setSelectedShowcaseIndex] = useState(0);
   const [activeFilter, setActiveFilter] = useState('All');
   const [priceRange, setPriceRange] = useState(2000);
   const [selectedCakeForCustomization, setSelectedCakeForCustomization] = useState(null);
+  const [selectedCakeForDetails, setSelectedCakeForDetails] = useState(null);
   const [customOptions, setCustomOptions] = useState({
     weight: 1,
     isEggless: false,
     message: '',
+    message: '',
     flavor: 'Default / As Displayed',
     shape: 'Round'
   });
+  const [showUpsellModal, setShowUpsellModal] = useState(false);
+  const [stamps, setStamps] = useState(() => {
+    const saved = localStorage.getItem('loyaltyStamps');
+    return saved ? parseInt(saved, 10) : 0;
+  });
+  const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('loyaltyStamps', stamps.toString());
+  }, [stamps]);
+
+  useEffect(() => {
+    const handleLoyaltyUpdate = () => {
+      const saved = localStorage.getItem('loyaltyStamps');
+      if (saved) {
+        setStamps(parseInt(saved, 10));
+      }
+    };
+    window.addEventListener('loyalty-updated', handleLoyaltyUpdate);
+    return () => window.removeEventListener('loyalty-updated', handleLoyaltyUpdate);
+  }, []);
+
+  const handleAddStamp = () => {
+    if (stamps < 9) {
+      setStamps(prev => prev + 1);
+      toast.success('Stamp added! 🍰');
+    }
+  };
+
+  const handleRedeem = () => {
+    if (stamps === 9) {
+      setStamps(0);
+      setShowLoyaltyModal(false);
+      toast.success('🎉 Free Cake coupon added to your cart!');
+    }
+  };
 
   const filters = ['All', 'Birthdays', 'Weddings', 'Engagement parties', 'Anniversaries', 'Baby showers', 'Job promotions', 'Passing an exam', 'Completing a major project', 'Opening a new business', 'Buying a new home'];
+
+  const handleCollectionClick = (query) => {
+    setSearchParams({ q: query });
+    document.getElementById('menu')?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   useEffect(() => {
     setIsLoading(true);
@@ -113,6 +172,8 @@ const Home = () => {
 
     addToCart(customItem);
     setSelectedCakeForCustomization(null);
+    toast.success('Cake added! Would you like some decorations?');
+    setShowUpsellModal(true);
   };
 
   const handleAddDecorationToCart = (decoration) => {
@@ -125,337 +186,439 @@ const Home = () => {
       flavor: 'N/A',
       shape: 'N/A'
     });
+    toast.success('Added to cart!');
   };
 
-  const filteredCakes = cakes.filter(cake => {
-    if (cake.category === 'Decorations') return false;
-    const matchesCategory = !categoryQuery || cake.category === categoryQuery;
-    const matchesFilter = activeFilter === 'All' || (cake.tags && cake.tags.includes(activeFilter));
-    const cakePrice = parseFloat(String(cake.price).replace(/,/g, '')) || 0;
-    const matchesPrice = cakePrice <= priceRange;
-    const matchesSearch = !searchQuery || 
-      cake.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (cake.description && cake.description.toLowerCase().includes(searchQuery.toLowerCase()));
-      
-    return matchesCategory && matchesFilter && matchesPrice && matchesSearch;
-  });
+  const cakesData = cakes.filter(c => c.category === 'Cakes').slice(0, 12);
+  const coffeeData = cakes.filter(c => c.category === 'Coffee').slice(0, 12);
+  const pastriesData = cakes.filter(c => c.category === 'Pastries').slice(0, 12);
+  const giftsData = cakes.filter(c => c.category === 'Gifts').slice(0, 12);
+  const filteredDecorations = cakes.filter(c => c.category === 'Decorations');
 
-  const filteredDecorations = cakes.filter(cake => {
-    if (cake.category !== 'Decorations') return false;
-    const matchesSearch = !searchQuery || 
-      cake.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (cake.description && cake.description.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesSearch;
-  });
 
-  const activeCake = SHOWCASE_CAKES[selectedShowcaseIndex];
-  const bestSellers = filteredCakes.slice(0, 3);
+  const bestSellersData = cakes.filter(c => c.isBestSeller).slice(0, 4);
 
   return (
-    <main className="pt-24">
-      {/* Static Hero Section */}
-      <section className="relative w-full flex flex-col md:block md:h-[80vh] bg-[#1a110a] overflow-hidden">
-        {/* Fallback for slow/broken hero image */}
-        <div className="absolute inset-0 hidden md:flex flex-col items-center justify-center text-center p-6 bg-gradient-to-br from-primary/90 to-[#1a110a] z-0">
-          <h1 className="text-4xl md:text-6xl font-headline-lg font-bold text-white mb-4">Snow Cakes Bakery</h1>
-          <p className="text-xl md:text-2xl text-white/90">The best bakery in Kathmandu for custom cakes & pastries.</p>
-        </div>
-        
-        <div className="w-full md:absolute md:inset-0 z-10">
-          <img 
-            src="/hero.png" 
-            alt="Snow Cakes Bakery - Freshly baked cakes and pastries" 
-            className="w-full h-auto md:h-full object-cover object-top" 
-          />
-        </div>
-        
-        <div className="relative md:absolute md:inset-0 z-20 flex flex-col justify-end p-4 md:p-16">
-          <div className="flex flex-col sm:flex-row gap-4 max-w-xl">
-            <a 
-              href="#menu" 
-              className="px-6 py-3 md:px-8 md:py-4 bg-primary text-white font-bold rounded-full text-base md:text-lg hover:bg-primary/90 transition-all shadow-[0_10px_25px_rgba(68,42,34,0.3)] hover:scale-105 hover:-translate-y-1 active:scale-95 flex items-center gap-2 justify-center"
-            >
-              Explore Cakes
-              <ArrowRight size={20} />
-            </a>
-            <Link 
-              to="/custom-order"
-              className="px-6 py-3 md:px-8 md:py-4 bg-white text-primary font-bold rounded-full text-base md:text-lg hover:bg-gray-100 transition-all shadow-[0_10px_25px_rgba(0,0,0,0.1)] hover:scale-105 hover:-translate-y-1 active:scale-95 flex items-center gap-2 justify-center"
-            >
-              Customize Cake
-              <Sparkles size={20} />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-12 md:py-16 px-margin-mobile bg-surface">
-        <div className="max-w-container-max mx-auto text-center">
-          <span className="font-label-lg text-label-lg text-primary uppercase tracking-[0.2em] mb-4 block">Our Commitment</span>
-          <h2 className="font-headline-lg text-2xl md:text-4xl text-primary mb-6">Welcome to the best bakery in Kathmandu.</h2>
-          <p className="font-body-lg text-lg text-on-surface-variant max-w-3xl mx-auto leading-relaxed">
-            Whether you are looking for the perfect <strong>birthday cake in Kathmandu</strong> or a stunning <strong>wedding cake in Nepal</strong>, our artisan bakers handcraft every order with premium ingredients. 
-            Want something unique? Order a <strong>custom cake in Kathmandu</strong> tailored to your celebration. We also proudly serve as a premier <strong>donut shop in Kathmandu</strong>, and offer specialty dietary options including <strong>gluten free cake in Kathmandu</strong> and <strong>vegan cake in Kathmandu</strong>!
-          </p>
-          <div className="w-24 h-1 bg-primary-fixed mx-auto rounded-full mt-8"></div>
-        </div>
-      </section>
-
-      {/* Best Sellers Section */}
-      {bestSellers.length > 0 && (
-        <section className="py-16 bg-surface-container-low/50 border-y border-outline-variant/15">
-          <div className="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
-            <div className="text-center mb-12">
-              <span className="font-label-lg text-label-lg text-secondary uppercase tracking-[0.2em] mb-3 block">Customer Favorites</span>
-              <h2 className="font-headline-lg text-3xl md:text-4xl text-primary font-bold">Our Best Sellers</h2>
-              <div className="w-16 h-1 bg-secondary mx-auto rounded-full mt-4"></div>
+    <main>
+      <SEO 
+        title="Home" 
+        description="Welcome to Cake Snow Bakery. Order custom cakes, pastries, and gifts in Tikathali and Balkot." 
+        keywords="home, Cake Snow Bakery, fresh bakery, best cake shop Kathmandu, bakery near me, cakes in kathmandu, cake in Nepal, online cake"
+      />
+      <Hero />
+      
+      {/* 1. Today's Best Seller Section */}
+      {bestSellersData.length > 0 && (
+        <section className="py-12 bg-[#FDFBF7] dark:bg-[#12041C] relative z-30">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <ScrollReveal animation="fadeUp">
+            <div className="text-center mb-8 flex flex-col items-center">
+              <div className="flex items-center gap-4 justify-center mb-2">
+                <div className="w-12 h-[1px] bg-[#D4AF37]"></div>
+                <h2 className="font-headline-lg text-2xl md:text-3xl text-[#2A0845] dark:text-[#FDFBF7] font-bold">Today's Best Seller</h2>
+                <div className="w-12 h-[1px] bg-[#D4AF37]"></div>
+              </div>
+              <Link to="/menu" className="text-sm font-medium text-[#D4AF37] hover:text-[#2A0845] dark:text-[#FDFBF7] self-end hidden md:block">View All</Link>
             </div>
+            </ScrollReveal>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {bestSellers.map((cake) => (
-                <div 
-                  key={cake.id} 
-                  className="bg-surface rounded-3xl overflow-hidden border border-outline-variant/20 shadow-[0_10px_30px_rgba(68,42,34,0.04)] transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(68,42,34,0.08)] group flex flex-col relative"
-                >
-                  <div className="absolute top-4 left-4 z-10 bg-secondary text-white text-[10px] font-bold uppercase tracking-wider px-3.5 py-1.5 rounded-full shadow-md">
-                    🔥 Best Seller
+            <div className="flex overflow-x-auto pb-4 snap-x snap-mandatory hide-scrollbar md:grid md:grid-cols-4 gap-4 md:gap-6">
+              {bestSellersData.map((cake) => (
+                <div key={cake.id} className="min-w-[240px] md:min-w-0 snap-center bg-white dark:bg-[#1D0A2D] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-[#EAC2BB]/20 dark:border-[#D4AF37]/20 group cursor-pointer" onClick={() => handleAddToCartClick(cake)}>
+                  <div className="aspect-[4/3] w-full overflow-hidden bg-[#f9f5ed] dark:bg-[#12041C]">
+                    <img src={cake.image || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&q=80'} alt={cake.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   </div>
-                  <div className="aspect-[4/3] w-full overflow-hidden bg-surface-variant relative">
-                    <img 
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
-                      alt={cake.name} 
-                      src={cake.image || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800&q=80'} 
-                    />
-                  </div>
-
-                  <div className="p-6 flex flex-col justify-between flex-grow">
-                    <div>
-                      <h4 className="font-headline-md text-lg md:text-xl text-primary font-bold mb-2 group-hover:text-secondary transition-colors duration-300 line-clamp-1">
-                        {cake.name}
-                      </h4>
-                      <p className="font-body-sm text-xs md:text-sm text-on-surface-variant mb-6 line-clamp-2 leading-relaxed">
-                        {cake.description}
-                      </p>
-                    </div>
-
-                    <div className="flex justify-between items-center pt-4 border-t border-outline-variant/10 mt-auto">
-                      <div className="flex flex-col">
-                        <span className="text-[9px] uppercase tracking-wider text-on-surface-variant font-medium">Price</span>
-                        <span className="font-headline-md text-lg text-primary font-bold">Rs. {cake.price}</span>
+                  <div className="p-4 text-center">
+                    <h3 className="font-bold text-[#2A0845] dark:text-[#FDFBF7] text-lg leading-tight mb-2 min-h-[44px]">{cake.name}</h3>
+                    <div className="flex items-center justify-center gap-3">
+                      <span className="font-bold text-[#2A0845] dark:text-[#FDFBF7]">Rs. {cake.price}</span>
+                      <div className="flex items-center gap-1 text-[#FACC15] text-sm">
+                        <Star size={14} fill="currentColor" />
+                        <span className="text-[#2A0845] dark:text-[#FDFBF7] font-medium">{cake.rating || '4.8'}</span>
                       </div>
-                      
-                      <button 
-                        onClick={() => handleAddToCartClick(cake)}
-                        className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white font-label-lg hover:bg-primary/95 transition-all shadow-md active:scale-95"
-                      >
-                        <ShoppingBag size={14} />
-                        <span className="text-xs">Add to Cart</span>
-                      </button>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
+            <Link to="/menu" className="text-sm font-medium text-[#D4AF37] block text-center mt-4 md:hidden">View All</Link>
           </div>
         </section>
       )}
 
-      {/* Products Grid */}
-      <section id="menu" className="py-16 max-w-container-max mx-auto px-margin-mobile">
-        <div className="text-center mb-10">
-          <h2 className="font-headline-lg text-headline-lg text-primary">
-            {searchQuery ? `Search Results for "${searchQuery}"` : "Our Cakes"}
-          </h2>
-          <div className="flex flex-col md:flex-row items-center justify-center gap-6 bg-surface-container-low p-6 rounded-2xl border border-outline-variant/30 mb-10 shadow-sm mt-6">
-            <div className="flex flex-wrap justify-center gap-2">
-              {filters.map(filter => (
-                <button
-                  key={filter}
-                  onClick={() => setActiveFilter(filter)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                    activeFilter === filter 
-                      ? 'bg-primary text-white shadow-md' 
-                      : 'bg-surface text-on-surface hover:bg-surface-variant border border-outline-variant'
-                  }`}
-                >
-                  {filter}
-                </button>
-              ))}
+      {/* Our Cakes Showcase */}
+      <section className="py-12 bg-[#FDFBF7] dark:bg-[#12041C] relative z-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <ScrollReveal animation="fadeLeft">
+          <div className="flex justify-between items-end mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-[1px] bg-[#D4AF37]"></div>
+              <h2 className="font-headline-lg text-2xl md:text-3xl text-[#2A0845] dark:text-[#FDFBF7] font-bold">Our Signature Cakes</h2>
             </div>
-            
-            <div className="w-full md:w-64 flex flex-col items-center border-t md:border-t-0 md:border-l border-outline-variant/30 pt-4 md:pt-0 md:pl-6">
-              <label className="text-sm font-medium text-on-surface mb-2 flex justify-between w-full">
-                <span>Max Price</span>
-                <span className="text-primary font-bold">Rs. {priceRange}</span>
-              </label>
-              <input 
-                type="range" 
-                min="500" 
-                max="5000" 
-                step="100" 
-                value={priceRange}
-                onChange={(e) => setPriceRange(Number(e.target.value))}
-                className="w-full accent-primary"
-              />
-            </div>
+            <Link to="/cakes" className="hidden md:flex items-center gap-2 text-sm font-bold text-[#D4AF37] hover:text-[#2A0845] dark:text-[#FDFBF7] transition-colors">
+              View More <ArrowRight size={16} />
+            </Link>
           </div>
-        </div>
-        
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-gutter">
-          {filteredCakes.map((cake) => (
-            <div key={cake.id} className="bg-surface-container-low rounded-xl p-3 md:p-6 shadow-[0_10px_30px_rgba(62,39,35,0.08)] group flex flex-col">
-              <div className="aspect-square overflow-hidden rounded-lg mb-4 md:mb-6 bg-surface-variant">
+          <p className="text-sm md:text-base text-[#504441] dark:text-[#d1c1d9] mb-6 -mt-4 max-w-2xl">Every layer tells a story of passion — baked fresh daily with the finest ingredients and a sprinkle of love.</p>
+          </ScrollReveal>
+          <ScrollReveal animation="fadeUp" delay={150}>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            {cakesData.map((item) => (
+            <div key={item.id} className="bg-white dark:bg-[#1D0A2D] rounded-2xl p-4 shadow-sm hover:shadow-md border border-[#EAC2BB]/20 dark:border-[#D4AF37]/20 group flex flex-col">
+              <Link 
+                className="aspect-square overflow-hidden rounded-xl mb-4 bg-[#f9f5ed] dark:bg-[#12041C] cursor-pointer block relative"
+                to={`/product/${item.id}`}
+              >
                 <img 
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                  alt={cake.name} 
-                  src={cake.image || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800&q=80'} 
+                  alt={item.name} 
+                  src={item.image || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800&q=80'} 
                 />
+              </Link>
+              <div className="flex flex-col md:flex-row justify-between items-start mb-2 gap-1 md:gap-0 min-h-[44px]">
+                <Link 
+                  className="font-bold text-sm md:text-md text-[#2A0845] dark:text-[#FDFBF7] line-clamp-2 cursor-pointer hover:text-[#D4AF37] transition-colors leading-tight"
+                  to={`/product/${item.id}`}
+                >
+                  {item.name}
+                </Link>
               </div>
-              <div className="flex justify-between items-start mb-2">
-                <h4 className="font-headline-md text-sm md:text-headline-md text-primary line-clamp-1">{cake.name}</h4>
-                <span className="font-label-lg text-[10px] md:text-label-lg text-on-surface-variant bg-surface px-2 md:px-3 py-1 rounded-full whitespace-nowrap">Rs. {cake.price}</span>
+              <div className="flex items-center justify-between mb-4 mt-auto">
+                <span className="font-bold text-sm md:text-md text-[#2A0845] dark:text-[#FDFBF7] whitespace-nowrap">Rs. {item.price}</span>
+                <div className="flex items-center gap-1 text-[#FACC15] text-xs">
+                  <Star size={12} fill="currentColor" />
+                  <span className="text-[#2A0845] dark:text-[#FDFBF7] font-medium">{item.rating || '4.8'}</span>
+                </div>
               </div>
-              <p className="font-body-sm text-[10px] md:text-body-sm text-on-surface-variant mb-4 md:mb-6 flex-grow line-clamp-2">{cake.description}</p>
               <button 
-                onClick={() => handleAddToCartClick(cake)}
-                className="w-full py-4 rounded-full bg-primary text-white font-label-lg hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2"
+                onClick={() => handleAddToCartClick(item)}
+                className="w-full py-2.5 rounded-xl bg-[#2A0845] dark:bg-[#3D155F] text-white font-bold text-sm hover:bg-[#FACC15] hover:text-[#2A0845] dark:text-[#FDFBF7] transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95"
               >
-                <ShoppingBag size={16} className="md:w-5 md:h-5" />
-                <span className="text-xs md:text-label-lg">Add to Cart</span>
+                <ShoppingBag size={14} />
+                <span>Add to Cart</span>
               </button>
             </div>
-          ))}
-          {filteredCakes.length === 0 && !isLoading && (
-            <div className="col-span-full text-center py-10">
-              <p className="text-on-surface-variant text-lg">No cakes available matching these filters.</p>
-            </div>
-          )}
-          {isLoading && (
-            <div className="col-span-full text-center py-10">
-              <p className="text-on-surface-variant text-lg animate-pulse">Loading cake...</p>
-            </div>
-          )}
+))}
+            {cakesData.length === 0 && !isLoading && (
+              <div className="col-span-full text-center py-10">
+                <p className="text-[#2A0845] dark:text-[#FDFBF7]/70">No items available right now.</p>
+              </div>
+            )}
+          </div>
+          <div className="mt-6 text-center md:hidden">
+            <Link to="/cakes" className="inline-flex items-center gap-2 text-sm font-bold text-[#D4AF37] hover:text-[#2A0845] dark:text-[#FDFBF7] transition-colors">
+              View More <ArrowRight size={16} />
+            </Link>
+          </div>
+          </ScrollReveal>
         </div>
       </section>
 
-      {/* Decorations Section */}
-      {filteredDecorations.length > 0 && (
-        <section className="py-16 max-w-container-max mx-auto px-margin-mobile bg-surface-container-low/30 border-t border-outline-variant/15">
-          <div className="text-center mb-10">
-            <span className="font-label-lg text-label-lg text-secondary uppercase tracking-[0.2em] mb-3 block">Extras</span>
-            <h2 className="font-headline-lg text-3xl md:text-4xl text-primary font-bold">Decoration Items</h2>
-            <div className="w-16 h-1 bg-secondary mx-auto rounded-full mt-4"></div>
+
+      {/* Hot Coffee Showcase */}
+      <section className="py-12 bg-[#FDFBF7] dark:bg-[#12041C] relative z-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <ScrollReveal animation="fadeRight">
+          <div className="flex justify-between items-end mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-[1px] bg-[#D4AF37]"></div>
+              <h2 className="font-headline-lg text-2xl md:text-3xl text-[#2A0845] dark:text-[#FDFBF7] font-bold">Brewed to Perfection</h2>
+            </div>
+            <Link to="/coffee" className="hidden md:flex items-center gap-2 text-sm font-bold text-[#D4AF37] hover:text-[#2A0845] dark:text-[#FDFBF7] transition-colors">
+              View More <ArrowRight size={16} />
+            </Link>
           </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-gutter">
-            {filteredDecorations.map((item) => (
-              <div key={item.id} className="bg-surface rounded-xl p-3 md:p-6 shadow-[0_10px_30px_rgba(62,39,35,0.05)] border border-outline-variant/10 group flex flex-col">
-                <div className="aspect-square overflow-hidden rounded-lg mb-4 bg-surface-variant relative p-2">
-                  <img 
-                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500 mix-blend-multiply" 
-                    alt={item.name} 
-                    src={item.image || 'https://via.placeholder.com/150'} 
-                  />
-                </div>
-                <div className="flex flex-col mb-2">
-                  <h4 className="font-headline-md text-sm md:text-base text-primary line-clamp-2 min-h-[2.5rem]">{item.name}</h4>
-                  <span className="font-bold text-lg text-on-surface mt-1">Rs. {item.price}</span>
-                </div>
-                <button 
-                  onClick={() => handleAddDecorationToCart(item)}
-                  className="w-full mt-auto py-3 rounded-lg bg-secondary text-white font-medium hover:bg-secondary/90 transition-all shadow-sm flex items-center justify-center gap-2"
+          <p className="text-sm md:text-base text-[#504441] dark:text-[#d1c1d9] mb-6 -mt-4 max-w-2xl">Rich, aromatic, and crafted for coffee lovers — the perfect companion to your sweet indulgence.</p>
+          </ScrollReveal>
+          <ScrollReveal animation="fadeUp" delay={150}>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            {coffeeData.map((item) => (
+            <div key={item.id} className="bg-white dark:bg-[#1D0A2D] rounded-2xl p-4 shadow-sm hover:shadow-md border border-[#EAC2BB]/20 dark:border-[#D4AF37]/20 group flex flex-col">
+              <Link 
+                className="aspect-square overflow-hidden rounded-xl mb-4 bg-[#f9f5ed] dark:bg-[#12041C] cursor-pointer block relative"
+                to={`/product/${item.id}`}
+              >
+                <img 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                  alt={item.name} 
+                  src={item.image || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800&q=80'} 
+                />
+              </Link>
+              <div className="flex flex-col md:flex-row justify-between items-start mb-2 gap-1 md:gap-0 min-h-[44px]">
+                <Link 
+                  className="font-bold text-sm md:text-md text-[#2A0845] dark:text-[#FDFBF7] line-clamp-2 cursor-pointer hover:text-[#D4AF37] transition-colors leading-tight"
+                  to={`/product/${item.id}`}
                 >
-                  <ShoppingBag size={16} />
-                  <span className="text-sm">Add to Cart</span>
-                </button>
+                  {item.name}
+                </Link>
+              </div>
+              <div className="flex items-center justify-between mb-4 mt-auto">
+                <span className="font-bold text-sm md:text-md text-[#2A0845] dark:text-[#FDFBF7] whitespace-nowrap">Rs. {item.price}</span>
+                <div className="flex items-center gap-1 text-[#FACC15] text-xs">
+                  <Star size={12} fill="currentColor" />
+                  <span className="text-[#2A0845] dark:text-[#FDFBF7] font-medium">{item.rating || '4.8'}</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => handleAddToCartClick(item)}
+                className="w-full py-2.5 rounded-xl bg-[#2A0845] dark:bg-[#3D155F] text-white font-bold text-sm hover:bg-[#FACC15] hover:text-[#2A0845] dark:text-[#FDFBF7] transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95"
+              >
+                <ShoppingBag size={14} />
+                <span>Add to Cart</span>
+              </button>
+            </div>
+))}
+            {coffeeData.length === 0 && !isLoading && (
+              <div className="col-span-full text-center py-10">
+                <p className="text-[#2A0845] dark:text-[#FDFBF7]/70">No items available right now.</p>
+              </div>
+            )}
+          </div>
+          <div className="mt-6 text-center md:hidden">
+            <Link to="/coffee" className="inline-flex items-center gap-2 text-sm font-bold text-[#D4AF37] hover:text-[#2A0845] dark:text-[#FDFBF7] transition-colors">
+              View More <ArrowRight size={16} />
+            </Link>
+          </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* Fresh Pastries Showcase */}
+      <section className="py-12 bg-[#FDFBF7] dark:bg-[#12041C] relative z-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <ScrollReveal animation="fadeLeft">
+          <div className="flex justify-between items-end mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-[1px] bg-[#D4AF37]"></div>
+              <h2 className="font-headline-lg text-2xl md:text-3xl text-[#2A0845] dark:text-[#FDFBF7] font-bold">Freshly Baked Pastries</h2>
+            </div>
+            <Link to="/pastries" className="hidden md:flex items-center gap-2 text-sm font-bold text-[#D4AF37] hover:text-[#2A0845] dark:text-[#FDFBF7] transition-colors">
+              View More <ArrowRight size={16} />
+            </Link>
+          </div>
+          <p className="text-sm md:text-base text-[#504441] dark:text-[#d1c1d9] mb-6 -mt-4 max-w-2xl">Golden, flaky, and irresistible — each pastry is a buttery masterpiece made to melt in your mouth.</p>
+          </ScrollReveal>
+          <ScrollReveal animation="scaleUp" delay={150}>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            {pastriesData.map((item) => (
+            <div key={item.id} className="bg-white dark:bg-[#1D0A2D] rounded-2xl p-4 shadow-sm hover:shadow-md border border-[#EAC2BB]/20 dark:border-[#D4AF37]/20 group flex flex-col">
+              <Link 
+                className="aspect-square overflow-hidden rounded-xl mb-4 bg-[#f9f5ed] dark:bg-[#12041C] cursor-pointer block relative"
+                to={`/product/${item.id}`}
+              >
+                <img 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                  alt={item.name} 
+                  src={item.image || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800&q=80'} 
+                />
+              </Link>
+              <div className="flex flex-col md:flex-row justify-between items-start mb-2 gap-1 md:gap-0 min-h-[44px]">
+                <Link 
+                  className="font-bold text-sm md:text-md text-[#2A0845] dark:text-[#FDFBF7] line-clamp-2 cursor-pointer hover:text-[#D4AF37] transition-colors leading-tight"
+                  to={`/product/${item.id}`}
+                >
+                  {item.name}
+                </Link>
+              </div>
+              <div className="flex items-center justify-between mb-4 mt-auto">
+                <span className="font-bold text-sm md:text-md text-[#2A0845] dark:text-[#FDFBF7] whitespace-nowrap">Rs. {item.price}</span>
+                <div className="flex items-center gap-1 text-[#FACC15] text-xs">
+                  <Star size={12} fill="currentColor" />
+                  <span className="text-[#2A0845] dark:text-[#FDFBF7] font-medium">{item.rating || '4.8'}</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => handleAddToCartClick(item)}
+                className="w-full py-2.5 rounded-xl bg-[#2A0845] dark:bg-[#3D155F] text-white font-bold text-sm hover:bg-[#FACC15] hover:text-[#2A0845] dark:text-[#FDFBF7] transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95"
+              >
+                <ShoppingBag size={14} />
+                <span>Add to Cart</span>
+              </button>
+            </div>
+))}
+            {pastriesData.length === 0 && !isLoading && (
+              <div className="col-span-full text-center py-10">
+                <p className="text-[#2A0845] dark:text-[#FDFBF7]/70">No items available right now.</p>
+              </div>
+            )}
+          </div>
+          <div className="mt-6 text-center md:hidden">
+            <Link to="/pastries" className="inline-flex items-center gap-2 text-sm font-bold text-[#D4AF37] hover:text-[#2A0845] dark:text-[#FDFBF7] transition-colors">
+              View More <ArrowRight size={16} />
+            </Link>
+          </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+
+      <ScrollReveal animation="scaleUp">
+      <PromotionalBanner />
+      </ScrollReveal>
+
+      {/* Surprise Gifts Showcase */}
+      <section className="py-12 bg-[#FDFBF7] dark:bg-[#12041C] relative z-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <ScrollReveal animation="fadeRight">
+          <div className="flex justify-between items-end mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-[1px] bg-[#D4AF37]"></div>
+              <h2 className="font-headline-lg text-2xl md:text-3xl text-[#2A0845] dark:text-[#FDFBF7] font-bold">Surprise Gifts & Hampers</h2>
+            </div>
+            <Link to="/gifts" className="hidden md:flex items-center gap-2 text-sm font-bold text-[#D4AF37] hover:text-[#2A0845] dark:text-[#FDFBF7] transition-colors">
+              View More <ArrowRight size={16} />
+            </Link>
+          </div>
+          <p className="text-sm md:text-base text-[#504441] dark:text-[#d1c1d9] mb-6 -mt-4 max-w-2xl">Make someone's day extra special — thoughtfully curated gift boxes for birthdays, anniversaries, and every occasion worth celebrating.</p>
+          </ScrollReveal>
+          <ScrollReveal animation="fadeUp" delay={150}>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            {giftsData.map((item) => (
+            <div key={item.id} className="bg-white dark:bg-[#1D0A2D] rounded-2xl p-4 shadow-sm hover:shadow-md border border-[#EAC2BB]/20 dark:border-[#D4AF37]/20 group flex flex-col">
+              <Link 
+                className="aspect-square overflow-hidden rounded-xl mb-4 bg-[#f9f5ed] dark:bg-[#12041C] cursor-pointer block relative"
+                to={`/product/${item.id}`}
+              >
+                <img 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                  alt={item.name} 
+                  src={item.image || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800&q=80'} 
+                />
+              </Link>
+              <div className="flex flex-col md:flex-row justify-between items-start mb-2 gap-1 md:gap-0 min-h-[44px]">
+                <Link 
+                  className="font-bold text-sm md:text-md text-[#2A0845] dark:text-[#FDFBF7] line-clamp-2 cursor-pointer hover:text-[#D4AF37] transition-colors leading-tight"
+                  to={`/product/${item.id}`}
+                >
+                  {item.name}
+                </Link>
+              </div>
+              <div className="flex items-center justify-between mb-4 mt-auto">
+                <span className="font-bold text-sm md:text-md text-[#2A0845] dark:text-[#FDFBF7] whitespace-nowrap">Rs. {item.price}</span>
+                <div className="flex items-center gap-1 text-[#FACC15] text-xs">
+                  <Star size={12} fill="currentColor" />
+                  <span className="text-[#2A0845] dark:text-[#FDFBF7] font-medium">{item.rating || '4.8'}</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => handleAddToCartClick(item)}
+                className="w-full py-2.5 rounded-xl bg-[#2A0845] dark:bg-[#3D155F] text-white font-bold text-sm hover:bg-[#FACC15] hover:text-[#2A0845] dark:text-[#FDFBF7] transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95"
+              >
+                <ShoppingBag size={14} />
+                <span>Add to Cart</span>
+              </button>
+            </div>
+))}
+            {giftsData.length === 0 && !isLoading && (
+              <div className="col-span-full text-center py-10">
+                <p className="text-[#2A0845] dark:text-[#FDFBF7]/70">No items available right now.</p>
+              </div>
+            )}
+          </div>
+          <div className="mt-6 text-center md:hidden">
+            <Link to="/gifts" className="inline-flex items-center gap-2 text-sm font-bold text-[#D4AF37] hover:text-[#2A0845] dark:text-[#FDFBF7] transition-colors">
+              View More <ArrowRight size={16} />
+            </Link>
+          </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+
+      {/* 4. Loyalty Card Offer */}
+      <section className="py-8 bg-[#FDFBF7] dark:bg-[#12041C]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <ScrollReveal animation="fadeUp">
+          <div className="bg-[#2A0845] dark:bg-[#3D155F] rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between shadow-xl text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#FACC15]/10 rounded-full blur-[80px]"></div>
+            
+            <div className="z-10 flex flex-col mb-6 md:mb-0 w-full md:w-1/3">
+              <h3 className="font-headline-xl text-2xl font-bold mb-1 text-center md:text-left">Loyalty Card</h3>
+              <p className="text-xs text-white/80 mb-6 text-center md:text-left">Because You Deserve Something Sweet!</p>
+              
+              <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+                {[1,2,3,4,5,6,7,8].map(num => (
+                  <div key={num} className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm transition-colors ${num <= stamps ? 'bg-[#D4AF37] text-white' : 'bg-white dark:bg-[#1D0A2D] text-[#2A0845] dark:text-[#FDFBF7]'}`}>
+                    {num <= stamps ? '✓' : num}
+                  </div>
+                ))}
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${stamps === 9 ? 'bg-[#D4AF37] text-white' : 'bg-white dark:bg-[#1D0A2D]/30 text-white'}`}>
+                  {stamps === 9 ? '✓' : '9'}
+                </div>
+                <div className={`w-10 h-10 rounded-full flex flex-col items-center justify-center font-bold text-[8px] leading-tight shadow-md ml-1 -mt-1 transform -rotate-12 border-2 border-white transition-all ${stamps === 9 ? 'bg-[#FACC15] text-[#2A0845] dark:text-[#FDFBF7] scale-110 animate-bounce' : 'bg-[#FACC15]/50 text-[#2A0845]/50 dark:text-[#FDFBF7]/50'}`}>
+                  <span>FREE</span>
+                  <span>CAKE</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="z-10 text-center w-full md:w-1/3 border-y md:border-y-0 md:border-x border-white/20 py-6 md:py-0 md:px-8 mb-6 md:mb-0">
+              <p className="text-lg mb-1">Collect 9 Stamps</p>
+              <h3 className="text-2xl font-bold text-[#FACC15] mb-4">Get 1 Regular Cake <br/><span className="text-3xl text-white">FREE!</span></h3>
+              <button 
+                onClick={() => setShowLoyaltyModal(true)}
+                className="bg-[#FACC15] text-[#2A0845] dark:text-[#FDFBF7] font-bold px-6 py-2 rounded-lg hover:bg-white dark:bg-[#1D0A2D] transition-colors text-sm"
+              >
+                {stamps === 9 ? 'Redeem Now' : 'Learn More'}
+              </button>
+            </div>
+
+            <div className="z-10 w-full md:w-1/3 flex justify-center items-center">
+               <div 
+                 onClick={handleAddStamp}
+                 className="w-24 h-24 border-2 border-[#D4AF37] rounded-full p-2 flex flex-col items-center justify-center bg-[#2A0845] dark:bg-[#3D155F] cursor-pointer hover:bg-[#3D155F] transition-colors group relative"
+                 title="Click to add a stamp (Demo)"
+               >
+                  <span className="text-white font-headline-md font-bold text-sm tracking-wider group-hover:scale-105 transition-transform">Cake</span>
+                  <span className="text-[#FACC15] font-headline-md font-bold text-sm tracking-wider group-hover:scale-105 transition-transform">Snow</span>
+                  <span className="absolute -bottom-6 text-[10px] text-white/50 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Tap to stamp (Demo)</span>
+               </div>
+            </div>
+          </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* 5. Customer Reviews (Customer Love) */}
+      <section className="py-12 bg-[#FDFBF7] dark:bg-[#12041C]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <ScrollReveal animation="fadeUp">
+          <div className="text-center mb-8 flex flex-col items-center">
+            <div className="flex items-center gap-4 justify-center mb-2">
+              <div className="w-12 h-[1px] bg-[#D4AF37]"></div>
+              <h2 className="font-headline-lg text-2xl md:text-3xl text-[#2A0845] dark:text-[#FDFBF7] font-bold">What Our Customers Say</h2>
+              <div className="w-12 h-[1px] bg-[#D4AF37]"></div>
+            </div>
+          </div>
+          </ScrollReveal>
+
+          <ScrollReveal animation="fadeUp" delay={200}>
+          <div className="flex overflow-x-auto pb-4 snap-x snap-mandatory hide-scrollbar md:grid md:grid-cols-3 gap-4 md:gap-6">
+            {[
+              { name: 'Sunita K.', text: 'Amazing cakes and excellent service. Cake Snow never disappoints!', rating: 5, avatar: 'https://i.pravatar.cc/150?img=44' },
+              { name: 'Ramesh P.', text: 'The best bakery in town! Love their taste and staff behavior.', rating: 5, avatar: 'https://i.pravatar.cc/150?img=33' },
+              { name: 'Anjali M.', text: 'Surprise gifts are so beautiful. Highly recommended!', rating: 5, avatar: 'https://i.pravatar.cc/150?img=5' }
+            ].map((review, i) => (
+              <div key={i} className="min-w-[280px] md:min-w-0 snap-center bg-white dark:bg-[#1D0A2D] p-6 rounded-2xl shadow-sm border border-[#EAC2BB]/20 dark:border-[#D4AF37]/20 relative flex flex-col">
+                <div className="flex items-center gap-3 mb-4">
+                  <img src={review.avatar} alt={review.name} className="w-10 h-10 rounded-full object-cover" />
+                  <div>
+                    <h5 className="font-bold text-[#2A0845] dark:text-[#FDFBF7] text-sm">{review.name}</h5>
+                    <div className="flex">
+                      {[1,2,3,4,5].map(star => <Star key={star} size={10} className="fill-amber-500 text-amber-500" />)}
+                    </div>
+                  </div>
+                </div>
+                <p className="text-sm text-[#2A0845] dark:text-[#FDFBF7]/80 italic leading-relaxed font-medium">"{review.text}"</p>
+                <div className="absolute bottom-4 right-4 text-blue-500 font-bold text-lg font-serif">G</div>
               </div>
             ))}
           </div>
-        </section>
-      )}
-
-      {/* Customer Reviews Section */}
-      <section className="py-20 bg-surface-container-low/50 border-t border-outline-variant/15 overflow-hidden">
-        <div className="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
-            <div>
-              <span className="font-label-lg text-label-lg text-secondary uppercase tracking-[0.2em] mb-3 block">Testimonials</span>
-              <h2 className="font-headline-lg text-3xl md:text-4xl text-primary font-bold">What Our Customers Say</h2>
-            </div>
-            
-            <div className="flex items-center gap-3 bg-white p-3 md:p-4 rounded-xl shadow-md border border-outline-variant/20 shrink-0">
-              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                <Star size={20} className="text-amber-500 fill-amber-500" />
-              </div>
-              <div>
-                <div className="flex items-center gap-1 mb-0.5">
-                  <span className="font-bold text-lg text-on-surface">4.9</span>
-                  <div className="flex">
-                    {[1,2,3,4,5].map(i => <Star key={i} size={12} className="fill-amber-500 text-amber-500" />)}
-                  </div>
-                </div>
-                <span className="text-xs text-on-surface-variant font-medium">Based on 450+ Google Reviews</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-            {/* Review 1 */}
-            <div className="bg-surface p-8 rounded-3xl shadow-sm border border-outline-variant/20 relative">
-              <div className="absolute top-6 right-6 text-primary/10">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" /></svg>
-              </div>
-              <div className="flex gap-1 mb-4">
-                {[1,2,3,4,5].map(i => <Star key={i} size={16} className="fill-amber-500 text-amber-500" />)}
-              </div>
-              <p className="font-body-md text-on-surface-variant mb-8 italic">"The vegan chocolate cake we ordered for my daughter's birthday was absolutely phenomenal. Nobody could even tell it was vegan! The texture was perfect and it looked stunning."</p>
-              <div className="flex items-center gap-4">
-                <img src="https://i.pravatar.cc/150?img=44" alt="Customer" className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" />
-                <div>
-                  <h5 className="font-headline-sm text-sm font-bold text-primary">Priya S.</h5>
-                  <span className="text-xs text-on-surface-variant">Ordered Vegan Chocolate</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Review 2 */}
-            <div className="bg-surface p-8 rounded-3xl shadow-sm border border-outline-variant/20 relative">
-              <div className="absolute top-6 right-6 text-primary/10">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" /></svg>
-              </div>
-              <div className="flex gap-1 mb-4">
-                {[1,2,3,4,5].map(i => <Star key={i} size={16} className="fill-amber-500 text-amber-500" />)}
-              </div>
-              <p className="font-body-md text-on-surface-variant mb-8 italic">"Snow Cakes handled my custom order perfectly. I sent a reference image for an anniversary cake and they nailed the design and the flavor. Best bakery in Lalitpur!"</p>
-              <div className="flex items-center gap-4">
-                <img src="https://i.pravatar.cc/150?img=33" alt="Customer" className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" />
-                <div>
-                  <h5 className="font-headline-sm text-sm font-bold text-primary">Aman T.</h5>
-                  <span className="text-xs text-on-surface-variant">Custom Anniversary Cake</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Review 3 */}
-            <div className="bg-surface p-8 rounded-3xl shadow-sm border border-outline-variant/20 relative">
-              <div className="absolute top-6 right-6 text-primary/10">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" /></svg>
-              </div>
-              <div className="flex gap-1 mb-4">
-                {[1,2,3,4,5].map(i => <Star key={i} size={16} className="fill-amber-500 text-amber-500" />)}
-              </div>
-              <p className="font-body-md text-on-surface-variant mb-8 italic">"Their gluten-free options are a lifesaver. It's so hard to find good GF baked goods, but their strawberry cream cake was moist, fluffy, and completely safe for me."</p>
-              <div className="flex items-center gap-4">
-                <img src="https://i.pravatar.cc/150?img=5" alt="Customer" className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" />
-                <div>
-                  <h5 className="font-headline-sm text-sm font-bold text-primary">Sita M.</h5>
-                  <span className="text-xs text-on-surface-variant">Gluten-Free Strawberry</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          </ScrollReveal>
         </div>
       </section>
+
+      {/* Cakes section moved to top */}
 
       {/* Customization Modal */}
       {selectedCakeForCustomization && (
@@ -516,12 +679,34 @@ const Home = () => {
                     className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface focus:ring-2 focus:ring-primary outline-none transition-all"
                   >
                     <option value="Default / As Displayed">As Displayed</option>
-                    <option value="Vanilla">Classic Vanilla</option>
-                    <option value="Chocolate">Rich Chocolate</option>
-                    <option value="Strawberry">Fresh Strawberry</option>
                     <option value="Black Forest">Black Forest</option>
+                    <option value="White Forest">White Forest</option>
+                    <option value="Vanilla">Vanilla</option>
+                    <option value="Chocolate">Chocolate</option>
+                    <option value="Strawberry">Strawberry</option>
+                    <option value="Blueberry">Blueberry</option>
+                    <option value="Butterscotch">Butterscotch</option>
+                    <option value="Mango">Mango</option>
+                    <option value="Orange">Orange</option>
                     <option value="Pineapple">Pineapple</option>
+                    <option value="Mocha">Mocha</option>
+                    <option value="Kiwi">Kiwi</option>
+                    <option value="Mix Fruit">Mix Fruit</option>
+                    <option value="Choco Chips">Choco Chips</option>
                     <option value="Red Velvet">Red Velvet</option>
+                    <option value="Truffle (White)">Truffle (White)</option>
+                    <option value="Truffle (Black)">Truffle (Black)</option>
+                    <option value="Opera">Opera</option>
+                    <option value="Italian">Italian</option>
+                    <option value="Double Chocolate">Double Chocolate</option>
+                    <option value="Tres Leches">Tres Leches</option>
+                    <option value="Cake Snow Special">Cake Snow Special</option>
+                    <option value="Sugarpaste with Cream">Sugarpaste with Cream</option>
+                    <option value="Sugarpaste">Sugarpaste</option>
+                    <option value="Brownie Cake">Brownie Cake</option>
+                    <option value="Cheesecake (Vanilla)">Cheesecake (Vanilla)</option>
+                    <option value="Cheesecake (All Flavours)">Cheesecake (All Flavours)</option>
+                    <option value="Choco Lava Cake">Choco Lava Cake</option>
                   </select>
                 </div>
                 <div>
@@ -575,6 +760,195 @@ const Home = () => {
           </div>
         </div>
       )}
+
+      {/* Details Modal */}
+      {selectedCakeForDetails && (
+        <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-surface rounded-2xl w-full max-w-lg shadow-2xl flex flex-col overflow-hidden">
+            <div className="relative h-64 bg-surface-variant">
+              <img 
+                src={selectedCakeForDetails.image || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800&q=80'} 
+                alt={selectedCakeForDetails.name}
+                className="w-full h-full object-cover"
+              />
+              <button 
+                onClick={() => setSelectedCakeForDetails(null)}
+                className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full hover:bg-black/80 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4 overflow-y-auto max-h-[50vh]">
+              <div>
+                <div className="flex justify-between items-start gap-4">
+                  <h3 className="font-headline-lg text-2xl font-bold text-primary">{selectedCakeForDetails.name}</h3>
+                  <span className="font-bold text-xl text-secondary whitespace-nowrap">Rs. {selectedCakeForDetails.price}</span>
+                </div>
+                {selectedCakeForDetails.tags && selectedCakeForDetails.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {selectedCakeForDetails.tags.map(tag => (
+                      <span key={tag} className="text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              <div className="pt-4 border-t border-outline-variant/30">
+                <h4 className="font-medium text-on-surface mb-2">Description</h4>
+                <p className="text-on-surface-variant leading-relaxed">
+                  {selectedCakeForDetails.description || 'No description available for this delicious cake.'}
+                </p>
+              </div>
+
+              <div className="mt-8 flex gap-4">
+                <button 
+                  onClick={() => setSelectedCakeForDetails(null)}
+                  className="flex-1 py-3.5 rounded-xl border-2 border-outline-variant font-medium text-on-surface hover:border-primary/50 hover:bg-surface-container-low transition-colors"
+                >
+                  Close
+                </button>
+                <button 
+                  onClick={() => {
+                    setSelectedCakeForDetails(null);
+                    handleAddToCartClick(selectedCakeForDetails);
+                  }}
+                  className="flex-1 py-3.5 rounded-xl bg-primary text-white font-medium hover:bg-primary/95 transition-all shadow-md flex items-center justify-center gap-2"
+                >
+                  <ShoppingBag size={18} />
+                  Customize & Buy
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upsell Modal */}
+      {showUpsellModal && (
+        <div className="fixed inset-0 bg-black/60 z-[80] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-surface rounded-3xl w-full max-w-3xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
+            <div className="bg-primary/10 p-6 text-center border-b border-primary/20 relative">
+              <h2 className="font-headline-md text-2xl text-primary font-bold">Make It Extra Special! ✨</h2>
+              <p className="text-on-surface-variant mt-2 font-medium">Your cake is in the cart. Add these popular party items to complete your celebration.</p>
+              <button 
+                onClick={() => setShowUpsellModal(false)}
+                className="absolute top-4 right-4 text-on-surface-variant hover:text-primary transition-colors bg-white dark:bg-[#1D0A2D] p-2 rounded-full shadow-sm"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 bg-surface-container-low/30">
+              {filteredDecorations.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {filteredDecorations.slice(0, 8).map((item) => (
+                    <div key={item.id} className="bg-white dark:bg-[#1D0A2D] rounded-xl p-3 shadow-sm border border-outline-variant/20 flex flex-col items-center text-center">
+                      <img 
+                        src={item.image || 'https://via.placeholder.com/150'} 
+                        alt={item.name} 
+                        className="w-20 h-20 object-cover rounded-lg mb-3 mix-blend-multiply"
+                      />
+                      <h4 className="font-bold text-sm text-primary line-clamp-2 leading-tight mb-1">{item.name}</h4>
+                      <p className="text-secondary font-bold mb-3">Rs. {item.price}</p>
+                      <button 
+                        onClick={() => handleAddDecorationToCart(item)}
+                        className="w-full mt-auto py-2 rounded-lg bg-surface-variant text-on-surface font-medium hover:bg-primary hover:text-white transition-colors text-xs flex items-center justify-center gap-1"
+                      >
+                        <ShoppingBag size={12} /> Add
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-on-surface-variant py-8">No decorations available right now.</p>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-outline-variant/20 bg-white dark:bg-[#1D0A2D] flex flex-col sm:flex-row gap-4">
+              <button 
+                onClick={() => setShowUpsellModal(false)}
+                className="flex-1 py-3 rounded-xl border border-outline-variant font-medium text-on-surface hover:bg-surface-container-low transition-colors"
+              >
+                Continue Shopping
+              </button>
+              <button 
+                onClick={() => {
+                  setShowUpsellModal(false);
+                  setIsCartOpen(true);
+                }}
+                className="flex-1 py-3 rounded-xl bg-secondary text-white font-bold hover:bg-secondary/90 transition-colors shadow-md flex items-center justify-center gap-2"
+              >
+                Go to Cart <ArrowRight size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Loyalty Modal */}
+      {showLoyaltyModal && (
+        <div className="fixed inset-0 bg-black/60 z-[80] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-surface rounded-3xl w-full max-w-md shadow-2xl flex flex-col overflow-hidden">
+            <div className="bg-[#2A0845] dark:bg-[#3D155F] p-6 text-center border-b border-[#D4AF37]/20 relative">
+              <h2 className="font-headline-md text-2xl text-[#FACC15] font-bold">Loyalty Program</h2>
+              <p className="text-white/80 mt-2 font-medium">Because you deserve something sweet!</p>
+              <button 
+                onClick={() => setShowLoyaltyModal(false)}
+                className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="space-y-4 text-on-surface-variant mb-6 text-sm">
+                <p><strong>1.</strong> Earn one stamp for every regular cake purchased online or in-store.</p>
+                <p><strong>2.</strong> Collect 9 stamps to get your 10th regular cake for FREE!</p>
+                <p><strong>3.</strong> Stamps cannot be transferred or exchanged for cash.</p>
+                <p><strong>4.</strong> For demonstration purposes, you can tap the "Cake Snow" stamp on the homepage to add stamps.</p>
+              </div>
+
+              <div className="bg-surface-container-low p-4 rounded-xl text-center mb-6">
+                <p className="text-sm font-medium text-on-surface-variant mb-1">Your Current Stamps</p>
+                <p className="text-3xl font-bold text-primary">{stamps} / 9</p>
+                {stamps === 9 && <p className="text-green-600 font-bold mt-2 animate-pulse">You have a Free Cake waiting!</p>}
+              </div>
+
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setShowLoyaltyModal(false)}
+                  className="flex-1 py-3 rounded-xl border border-outline-variant text-on-surface font-medium hover:bg-surface-container transition-colors"
+                >
+                  Close
+                </button>
+                {stamps === 9 ? (
+                  <button 
+                    onClick={handleRedeem}
+                    className="flex-1 py-3 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-colors shadow-md"
+                  >
+                    Redeem Now
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => {
+                      handleAddStamp();
+                      if (stamps === 8) {
+                        setShowLoyaltyModal(false);
+                      }
+                    }}
+                    className="flex-1 py-3 rounded-xl bg-[#FACC15] text-[#2A0845] font-bold hover:bg-[#FACC15]/90 transition-colors shadow-md"
+                  >
+                    Add Stamp (Demo)
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </main>
   );
 };

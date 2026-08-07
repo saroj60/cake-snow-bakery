@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, ListOrdered, Settings, LogOut, Menu, X, CheckSquare } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, ListOrdered, Settings, LogOut, Menu, X, CheckSquare, Users, Gift, ImageIcon } from 'lucide-react';
 import { getSession, logout } from '../../services/db';
 
 const AdminLayout = () => {
@@ -29,7 +29,10 @@ const AdminLayout = () => {
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Products', href: '/admin/products', icon: ShoppingBag },
     { name: 'Orders', href: '/admin/orders', icon: ListOrdered },
+    { name: 'Follow-ups', href: '/admin/followups', icon: Users },
+    { name: 'Gallery', href: '/admin/gallery', icon: ImageIcon },
     { name: 'Categories', href: '/admin/categories', icon: CheckSquare },
+    { name: 'Celebrations', href: '/admin/celebrations', icon: Gift },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
 

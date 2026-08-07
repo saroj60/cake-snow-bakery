@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Search, X } from 'lucide-react';
 import { getProducts, saveProduct, deleteProduct, uploadImage } from '../../services/db';
 
@@ -8,6 +8,7 @@ const Products = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [search, setSearch] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   
   const [formData, setFormData] = useState({
     id: null,
@@ -18,12 +19,11 @@ const Products = () => {
     category: 'Cakes',
     occasion: 'General / Any',
     isActive: true,
-    isPerLb: false
+    isPerLb: false,
+    isBestSeller: false
   });
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  const [imageFile, setImageFile] = useState(null);
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -32,7 +32,12 @@ const Products = () => {
     setIsLoading(false);
   };
 
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
   const handleOpenModal = (product = null) => {
+    setImageFile(null);
     if (product) {
       setFormData({
         ...product,
@@ -40,7 +45,7 @@ const Products = () => {
       });
     } else {
       setFormData({
-        id: null,
+        id: 'mock-new-' + Date.now(), // Generate a temporary ID if new
         name: '',
         price: '',
         description: '',
@@ -48,7 +53,8 @@ const Products = () => {
         category: 'Cakes',
         occasion: 'General / Any',
         isActive: true,
-        isPerLb: false
+        isPerLb: false,
+        isBestSeller: false
       });
     }
     setIsModalOpen(true);
@@ -58,28 +64,40 @@ const Products = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const productToSave = {
-      ...formData,
-      price: parseFloat(formData.price)
-    };
-    await saveProduct(productToSave);
-    await fetchProducts();
-    handleCloseModal();
+    setIsUploading(true);
+    try {
+      let finalImageUrl = formData.image;
+      if (imageFile) {
+        const uploadedUrl = await uploadImage(imageFile);
+        if (uploadedUrl) {
+          finalImageUrl = uploadedUrl;
+        }
+      }
+
+      const productToSave = {
+        ...formData,
+        image: finalImageUrl,
+        price: parseFloat(formData.price)
+      };
+      await saveProduct(productToSave);
+      await fetchProducts();
+      handleCloseModal();
+      setSuccessMessage("Your cake is successfully added.");
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      alert("Failed to save product: " + error.message);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      try {
-        setIsUploading(true);
-        const url = await uploadImage(file);
-        setFormData({ ...formData, image: url });
-      } catch (error) {
-        console.error(error);
-        alert("Upload Error: " + (error.message || "Please check your Supabase Storage settings and Vercel Environment Variables."));
-      } finally {
-        setIsUploading(false);
-      }
+      setImageFile(file);
+      // Create a local preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setFormData({ ...formData, image: previewUrl });
     }
   };
 
@@ -94,6 +112,14 @@ const Products = () => {
 
   return (
     <div>
+      {successMessage && (
+        <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg shadow-sm flex justify-between items-center">
+          <span className="font-medium">{successMessage}</span>
+          <button onClick={() => setSuccessMessage('')} className="text-green-700 hover:text-green-900">
+            <X size={18} />
+          </button>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <h1 className="font-headline-lg text-2xl text-primary">Products</h1>
         <button 
@@ -204,7 +230,9 @@ const Products = () => {
                       className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface focus:ring-2 focus:ring-primary outline-none"
                     >
                       <option value="Cakes">Cakes</option>
+                      <option value="Coffee">Coffee</option>
                       <option value="Pastries">Pastries</option>
+                      <option value="Gifts">Gifts</option>
                       <option value="Donuts">Donuts</option>
                       <option value="Cookies">Cookies</option>
                       <option value="Bread">Bread</option>
@@ -218,6 +246,7 @@ const Products = () => {
                       className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface focus:ring-2 focus:ring-primary outline-none"
                     >
                       <option value="General / Any">General / Any</option>
+                      <option value="Special Occasion">Special Occasion</option>
                       <option value="Birthdays">Birthdays</option>
                       <option value="Weddings">Weddings</option>
                       <option value="Engagement parties">Engagement parties</option>
@@ -249,7 +278,7 @@ const Products = () => {
                       </label>
                     </div>
                   </div>
-                  <div className="flex items-center pt-6">
+                  <div className="flex items-center gap-6 pt-6">
                     <label className="flex items-center cursor-pointer">
                       <input 
                         type="checkbox" 
@@ -257,8 +286,19 @@ const Products = () => {
                         onChange={e => setFormData({...formData, isActive: e.target.checked})}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-surface-dim peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                      <div className="w-11 h-6 bg-surface-dim peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-[#1D0A2D] after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                       <span className="ml-3 text-sm font-medium text-on-surface">Active</span>
+                    </label>
+
+                    <label className="flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={formData.isBestSeller} 
+                        onChange={e => setFormData({...formData, isBestSeller: e.target.checked})}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-surface-dim peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-[#1D0A2D] after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                      <span className="ml-3 text-sm font-medium text-on-surface">Best Seller</span>
                     </label>
                   </div>
                   <div className="md:col-span-2">

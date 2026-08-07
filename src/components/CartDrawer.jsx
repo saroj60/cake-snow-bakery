@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Trash2, Plus, Minus, ShoppingBag, MapPin, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useCart } from '../context/CartContext';
 import { saveOrder } from '../services/db';
 
@@ -21,6 +22,8 @@ const CartDrawer = () => {
     phone: '',
     address: '',
     notes: '',
+    occasion: '',
+    occasionDate: '',
     lat: null,
     lng: null
   });
@@ -34,7 +37,7 @@ const CartDrawer = () => {
 
   const handleDetectLocation = () => {
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser.");
+      toast.error("Geolocation is not supported by your browser.");
       return;
     }
 
@@ -59,7 +62,7 @@ const CartDrawer = () => {
       },
       (error) => {
         console.error("Error detecting location:", error);
-        alert("Unable to retrieve your location. Please ensure location permissions are granted.");
+        toast.error("Unable to retrieve your location. Please ensure location permissions are granted.");
         setIsDetecting(false);
       }
     );
@@ -68,7 +71,7 @@ const CartDrawer = () => {
   const handleCheckout = (e) => {
     e.preventDefault();
     if (!formData.name || !formData.phone || !formData.address) {
-      alert("Please fill in your name, phone, and delivery address.");
+      toast.error("Please fill in your name, phone, and delivery address.");
       return;
     }
 
@@ -89,6 +92,9 @@ const CartDrawer = () => {
     if (formData.lat && formData.lng) {
       message += `Map Link: https://www.openstreetmap.org/?mlat=${formData.lat}&mlon=${formData.lng}\n`;
     }
+    if (formData.occasion && formData.occasionDate) {
+      message += `Occasion: ${formData.occasion} on ${formData.occasionDate}\n`;
+    }
     if (formData.notes) {
       message += `Notes: ${formData.notes}\n`;
     }
@@ -104,7 +110,9 @@ const CartDrawer = () => {
         address: formData.address,
         lat: formData.lat,
         lng: formData.lng,
-        notes: formData.notes
+        notes: formData.notes,
+        occasion: formData.occasion,
+        occasionDate: formData.occasionDate
       },
       items: cartItems.map(item => ({
         id: item.id,
@@ -118,15 +126,23 @@ const CartDrawer = () => {
     };
 
     saveOrder(orderToSave).then(() => {
+      // Add loyalty stamp
+      const currentStamps = parseInt(localStorage.getItem('loyaltyStamps') || '0', 10);
+      if (currentStamps < 9) {
+        localStorage.setItem('loyaltyStamps', (currentStamps + 1).toString());
+        window.dispatchEvent(new Event('loyalty-updated'));
+      }
+
       // After saving, redirect to WhatsApp
       const whatsappUrl = `https://wa.me/${ADMIN_PHONE}?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank');
       
+      toast.success("Order placed successfully! Redirecting to WhatsApp...");
       clearCart();
       setIsCartOpen(false);
     }).catch(error => {
       console.error("Failed to save order:", error);
-      alert("Order Error: " + (error.message || "Please try again."));
+      toast.error("Order Error: " + (error.message || "Please try again."));
     });
   };
 
@@ -144,7 +160,7 @@ const CartDrawer = () => {
       <div className="fixed top-0 right-0 h-full w-full md:w-[450px] bg-surface shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-in-out">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-outline-variant/30 bg-surface-container-low">
-          <h2 className="font-headline-md text-xl flex items-center gap-2 text-primary">
+          <h2 className="font-headline-md text-xl flex items-center gap-2 text-[#2A0845] dark:text-[#FDFBF7]">
             <ShoppingBag size={24} /> 
             Your Cart
           </h2>
@@ -159,12 +175,12 @@ const CartDrawer = () => {
         {/* Cart Items Area */}
         <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
           {cartItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-on-surface-variant opacity-70">
+            <div className="flex flex-col items-center justify-center h-full text-[#2A0845] dark:text-[#FDFBF7] opacity-80">
               <ShoppingBag size={64} className="mb-4" />
               <p className="text-lg">Your cart is empty.</p>
               <button 
                 onClick={() => setIsCartOpen(false)}
-                className="mt-6 px-6 py-2 bg-primary text-white rounded-full hover:bg-primary/90 transition-colors"
+                className="mt-6 px-6 py-2 bg-[#0D47A1] text-white rounded-full hover:bg-blue-800 transition-colors"
               >
                 Continue Shopping
               </button>
@@ -268,6 +284,26 @@ const CartDrawer = () => {
                       rows="2"
                       className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:ring-2 focus:ring-primary outline-none transition-all resize-none"
                     ></textarea>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <select 
+                      name="occasion" 
+                      value={formData.occasion} 
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:ring-2 focus:ring-primary outline-none transition-all text-on-surface-variant"
+                    >
+                      <option value="">Occasion (Optional)</option>
+                      <option value="Birthday">Birthday</option>
+                      <option value="Anniversary">Anniversary</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    <input 
+                      type="date" 
+                      name="occasionDate" 
+                      value={formData.occasionDate} 
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:ring-2 focus:ring-primary outline-none transition-all text-on-surface-variant"
+                    />
                   </div>
                   <div>
                     <textarea 

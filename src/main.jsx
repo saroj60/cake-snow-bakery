@@ -3,11 +3,11 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
-// Unregister any existing service workers to prevent old cached data
+import { registerSW } from 'virtual:pwa-register'
+
+// Register the PWA service worker
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.ready.then(registration => {
-    registration.unregister();
-  });
+  registerSW({ immediate: true })
 }
 
 createRoot(document.getElementById('root')).render(
