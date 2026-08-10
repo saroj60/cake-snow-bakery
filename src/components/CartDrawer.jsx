@@ -152,12 +152,12 @@ const CartDrawer = () => {
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/50 z-50 transition-opacity backdrop-blur-sm"
+        className="fixed inset-0 bg-black/50 z-[100] transition-opacity backdrop-blur-sm"
         onClick={() => setIsCartOpen(false)}
       ></div>
 
       {/* Drawer */}
-      <div className="fixed top-0 right-0 h-full w-full md:w-[450px] bg-surface shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-in-out">
+      <div className="fixed top-0 right-0 h-full w-full md:w-[450px] bg-surface shadow-2xl z-[100] flex flex-col transform transition-transform duration-300 ease-in-out">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-outline-variant/30 bg-surface-container-low">
           <h2 className="font-headline-md text-xl flex items-center gap-2 text-[#2A0845] dark:text-[#FDFBF7]">

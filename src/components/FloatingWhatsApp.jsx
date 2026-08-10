@@ -14,7 +14,7 @@ const FloatingSidebar = () => {
     <div className="fixed bottom-24 right-4 md:bottom-10 md:right-10 z-40 flex flex-col gap-3 items-center">
       {/* Map Button */}
       <a 
-        href="https://www.google.com/maps/place/Cake+Snow+Bakery+%26+Coffee+Shop/@27.6711585,85.3446311,3106m/data=!3m1!1e3!4m10!1m2!2m1!1scake+snow+bakery+%26+coffee+shop!3m6!1s0x39eb19b88d33e753:0x7f96ce6e2ddc3581!8m2!3d27.6672792!4d85.3535976"
+        href="https://maps.app.goo.gl/Ubvbwza5DjWdAv3UA"
         target="_blank" rel="noreferrer"
         className="bg-blue-600 text-white p-3 rounded-full shadow-[0_4px_10px_rgba(37,99,235,0.4)] hover:scale-110 hover:shadow-[0_8px_20px_rgba(37,99,235,0.6)] transition-all duration-300 flex items-center justify-center group"
         aria-label="View on Map"
