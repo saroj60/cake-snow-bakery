@@ -127,11 +127,9 @@ const Home = () => {
     setIsLoading(true);
     getProducts().then(products => {
       const activeProducts = products.filter(p => p.isActive !== false);
-      const mockTags = ['Birthdays', 'Weddings', 'Anniversaries'];
-      
       setCakes(activeProducts.map(p => ({
         ...p,
-        tags: p.tags && p.tags.length > 0 && p.tags[0] ? p.tags : [mockTags[Math.floor(Math.random() * mockTags.length)]]
+        tags: p.tags && p.tags.length > 0 && p.tags[0] ? p.tags : (p.occasion && p.occasion !== 'General / Any' ? [p.occasion] : [])
       })));
       setIsLoading(false);
     }).catch(() => setIsLoading(false));
@@ -198,12 +196,30 @@ const Home = () => {
 
   const bestSellersData = cakes.filter(c => c.isBestSeller).slice(0, 4);
 
+  const localBusinessSchema = {
+    "@context": "https://schema.org",
+    "@type": "Bakery",
+    "name": "Cake Snow Bakery",
+    "image": "https://cakesnowbakery.com/cakesnow-logo.jpg",
+    "description": "Order fresh, custom-designed cakes, pastries, and bakery items from Cake Snow Bakery. Specializing in birthdays, weddings, and celebrations.",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Kathmandu",
+      "addressRegion": "Bagmati",
+      "addressCountry": "NP"
+    },
+    "telephone": "+977-9860568012",
+    "priceRange": "$$",
+    "servesCuisine": "Bakery, Cakes, Pastries"
+  };
+
   return (
     <main>
       <SEO 
         title="Home" 
         description="Welcome to Cake Snow Bakery. Order custom cakes, pastries, and gifts in Tikathali and Balkot." 
         keywords="home, Cake Snow Bakery, fresh bakery, best cake shop Kathmandu, bakery near me, cakes in kathmandu, cake in Nepal, online cake"
+        schema={localBusinessSchema}
       />
       <Hero />
       

@@ -4,6 +4,7 @@ import { getProducts } from '../services/db';
 import { useCart } from '../context/CartContext';
 import { ShoppingBag, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
+import SEO from '../components/SEO';
 
 const Cakes = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -20,11 +21,9 @@ const Cakes = () => {
     setIsLoading(true);
     getProducts().then(products => {
       const activeProducts = products.filter(p => p.isActive !== false && p.category === 'Cakes');
-      const mockTags = ['Birthdays', 'Weddings', 'Anniversaries'];
-      
       setCakes(activeProducts.map(p => ({
         ...p,
-        tags: p.tags && p.tags.length > 0 && p.tags[0] ? p.tags : [mockTags[Math.floor(Math.random() * mockTags.length)]]
+        tags: p.tags && p.tags.length > 0 && p.tags[0] ? p.tags : (p.occasion && p.occasion !== 'General / Any' ? [p.occasion] : [])
       })));
       setIsLoading(false);
     }).catch(() => setIsLoading(false));
@@ -54,7 +53,12 @@ const Cakes = () => {
   });
 
   return (
-    <main className="min-h-screen bg-[#FDFBF7] dark:bg-[#12041C] pt-36 pb-16">
+    <div className="pt-24 pb-16 min-h-screen bg-[#FDFBF7] dark:bg-[#12041C]">
+      <SEO 
+        title="Premium Cakes in Nepal" 
+        description="Browse our collection of fresh, premium cakes for birthdays, weddings, and special occasions. Order the best cake in Nepal online." 
+        keywords="premium cakes, best cake in Nepal, anniversary cake, birthday cake Kathmandu, wedding cakes Nepal, custom cakes"
+      />
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10">
           <h1 className="font-headline-xl text-3xl md:text-5xl text-[#0D47A1] font-bold mb-4">

@@ -7,6 +7,7 @@ import DeliveryCheck from '../components/pdp/DeliveryCheck';
 import ProductTabs from '../components/pdp/ProductTabs';
 import RelatedProducts from '../components/pdp/RelatedProducts';
 import { getProducts } from '../services/db';
+import SEO from '../components/SEO';
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -71,8 +72,33 @@ const ProductDetails = () => {
 
   if (!product) return <div className="pt-24 text-center">Product not found.</div>;
 
+  const productSchema = {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    "name": product.name,
+    "image": product.images?.[0] || product.image,
+    "description": product.description || `Order ${product.name} from Cake Snow Bakery.`,
+    "offers": {
+      "@type": "Offer",
+      "url": window.location.href,
+      "priceCurrency": "NPR",
+      "price": basePrice,
+      "availability": "https://schema.org/InStock",
+      "seller": {
+        "@type": "Bakery",
+        "name": "Cake Snow Bakery"
+      }
+    }
+  };
+
   return (
     <div className="bg-[#FAF9F6] min-h-screen pt-20 pb-24 lg:pb-12 text-on-surface font-sans">
+      <SEO 
+        title={product.name} 
+        description={product.description || `Buy ${product.name} fresh from Cake Snow Bakery in Kathmandu.`}
+        image={product.images?.[0] || product.image}
+        schema={productSchema}
+      />
       
       {/* Breadcrumbs */}
       <div className="container-custom mx-auto px-4 py-4">
