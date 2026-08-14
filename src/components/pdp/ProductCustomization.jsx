@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Zap, Heart, Upload, Image as ImageIcon } from 'lucide-react';
+import { ShoppingCart, Zap, Heart } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 
 const FLAVORS = [
@@ -12,7 +12,7 @@ const FLAVORS = [
 ];
 
 const WEIGHTS = [1, 1.5, 2, 2.5, 3, 4, 5];
-const EGGLESS_SURCHARGE_PERCENT = 10; // e.g. 10% extra for eggless
+const EGGLESS_SURCHARGE_FLAT = 150; // flat 150 extra for eggless
 
 const ProductCustomization = ({ product, basePrice, totalPrice, setTotalPrice }) => {
   const { addToCart, setIsCartOpen } = useCart();
@@ -22,27 +22,18 @@ const ProductCustomization = ({ product, basePrice, totalPrice, setTotalPrice })
   const [isEggless, setIsEggless] = useState(false);
   const [message, setMessage] = useState('');
   const [instructions, setInstructions] = useState('');
-  const [uploadedImage, setUploadedImage] = useState(null);
+  
 
   // Recalculate price
   useEffect(() => {
     let price = basePrice * weight;
     if (isEggless) {
-      price = price + (price * EGGLESS_SURCHARGE_PERCENT / 100);
+      price = price + EGGLESS_SURCHARGE_FLAT;
     }
     setTotalPrice(price);
   }, [weight, isEggless, basePrice, setTotalPrice]);
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setUploadedImage(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+
 
   const handleAddToCart = () => {
     addToCart({
@@ -51,7 +42,7 @@ const ProductCustomization = ({ product, basePrice, totalPrice, setTotalPrice })
       price: totalPrice,
       image: product.images?.[0] || product.image,
       quantity: 1,
-      customizations: { weight, flavor, shape, isEggless, message, instructions, uploadedImage }
+      customizations: { weight, flavor, shape, isEggless, message, instructions }
     });
   };
 
@@ -145,7 +136,7 @@ const ProductCustomization = ({ product, basePrice, totalPrice, setTotalPrice })
         <div className="flex items-center justify-between p-4 rounded-xl border border-outline-variant bg-surface-container-lowest">
           <div>
             <p className="text-sm font-medium text-on-surface">Eggless Option</p>
-            <p className="text-xs text-on-surface-variant">+10% extra</p>
+            <p className="text-xs text-on-surface-variant">+ Rs. 150 extra</p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
             <input type="checkbox" className="sr-only peer" checked={isEggless} onChange={(e) => setIsEggless(e.target.checked)} />
@@ -167,26 +158,7 @@ const ProductCustomization = ({ product, basePrice, totalPrice, setTotalPrice })
           <p className="text-xs text-on-surface-variant mt-1 text-right">{message.length}/40</p>
         </div>
 
-        {/* Custom Image Upload */}
-        <div>
-          <label className="block text-sm font-medium text-on-surface mb-2">Upload Custom Image (For Photo Cakes)</label>
-          <div className="relative flex items-center justify-center w-full h-32 border-2 border-dashed rounded-xl border-outline-variant hover:border-primary transition-colors bg-surface-container-lowest overflow-hidden group cursor-pointer">
-            <input 
-              type="file" 
-              accept="image/png, image/jpeg, image/jpg" 
-              onChange={handleImageUpload}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
-            />
-            {uploadedImage ? (
-              <img src={uploadedImage} alt="Uploaded" className="w-full h-full object-cover" />
-            ) : (
-              <div className="flex flex-col items-center justify-center text-on-surface-variant group-hover:text-primary transition-colors">
-                <Upload className="w-8 h-8 mb-2" />
-                <span className="text-sm font-medium">Click to upload (PNG, JPG)</span>
-              </div>
-            )}
-          </div>
-        </div>
+
 
         {/* Special Instructions */}
         <div>
