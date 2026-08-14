@@ -1,4 +1,4 @@
-import logo from '../assets/logo.jpg';
+
 import { MapPin, Mail, Phone, Clock, Star, Send } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -10,8 +10,8 @@ const Footer = () => {
         {/* Column 1: Brand & Social */}
         <div className="flex flex-col items-start">
           <div className="flex items-center gap-2 mb-6">
-            <div className="w-12 h-12 bg-white dark:bg-[#1D0A2D] rounded-full p-1 overflow-hidden">
-               <img src={logo} alt="Cake Snow Logo" className="w-full h-full object-cover rounded-full mix-blend-multiply" />
+            <div className="w-14 h-14 overflow-hidden flex-shrink-0">
+               <img src="/cakesnow-logo.jpg" alt="Cake Snow Logo" className="w-full h-full object-cover rounded-[22%]" />
             </div>
             <div className="flex flex-col">
               <span className="font-bold text-xl leading-tight">Cake</span>

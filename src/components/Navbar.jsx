@@ -68,7 +68,7 @@ const Navbar = () => {
               {/* Logo */}
               <Link to="/" className="flex items-center gap-2 group">
                 <div className="relative flex items-center justify-center h-12 md:h-16 hover:scale-105 transition-transform duration-300">
-                  <img src="/logo-transparent.png" alt="Cake Snow Logo" className="h-full w-auto object-contain drop-shadow-md" />
+                  <img src="/cakesnow-logo.jpg" alt="Cake Snow Logo" className="h-full w-auto object-contain drop-shadow-md rounded-[22%]" />
                 </div>
               </Link>
 

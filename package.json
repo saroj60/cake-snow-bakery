@@ -5,8 +5,9 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
+    "dev": "vite",
     "start": "node server.js",
-    "build": "echo 'Build already completed locally. Skipping...'"
+    "build": "vite build"
   },
   "dependencies": {
     "cors": "^2.8.6",
