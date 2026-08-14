@@ -622,7 +622,7 @@ const Home = () => {
 
       {/* Customization Modal */}
       {selectedCakeForCustomization && (
-        <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-surface rounded-2xl w-full max-w-md shadow-2xl flex flex-col overflow-hidden">
             <div className="relative h-40 bg-surface-variant">
               <img 
@@ -763,7 +763,7 @@ const Home = () => {
 
       {/* Details Modal */}
       {selectedCakeForDetails && (
-        <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-surface rounded-2xl w-full max-w-lg shadow-2xl flex flex-col overflow-hidden">
             <div className="relative h-64 bg-surface-variant">
               <img 
