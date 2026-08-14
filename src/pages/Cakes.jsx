@@ -164,7 +164,7 @@ const Cakes = () => {
           )}
         </div>
       </section>
-    </main>
+    </div>
   );
 };
 
