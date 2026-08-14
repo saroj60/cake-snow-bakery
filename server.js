@@ -68,21 +68,24 @@ app.post('/api/products', (req, res) => {
   try {
     const p = req.body;
     const stmt = db.prepare(`
-      INSERT OR REPLACE INTO products (id, name, price, category, rating, reviews, image, description, features, isCustomDesign, isBestSeller)
-      VALUES (@id, @name, @price, @category, @rating, @reviews, @image, @description, @features, @isCustomDesign, @isBestSeller)
+      INSERT OR REPLACE INTO products (id, name, price, category, occasion, rating, reviews, image, description, features, isCustomDesign, isBestSeller, isPerLb, isActive)
+      VALUES (@id, @name, @price, @category, @occasion, @rating, @reviews, @image, @description, @features, @isCustomDesign, @isBestSeller, @isPerLb, @isActive)
     `);
     stmt.run({
       id: p.id || Date.now().toString(),
       name: p.name,
       price: p.price,
       category: p.category || 'Cakes',
+      occasion: p.occasion || 'General / Any',
       rating: p.rating || 0,
       reviews: p.reviews || 0,
       image: p.image || '',
       description: p.description || '',
       features: JSON.stringify(p.features || []),
       isCustomDesign: p.isCustomDesign ? 1 : 0,
-      isBestSeller: p.isBestSeller ? 1 : 0
+      isBestSeller: p.isBestSeller ? 1 : 0,
+      isPerLb: p.isPerLb ? 1 : 0,
+      isActive: p.isActive !== false ? 1 : 0
     });
     res.json({ success: true });
   } catch (error) {
