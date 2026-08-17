@@ -9,10 +9,15 @@ const AdminLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const [userRole, setUserRole] = useState(null);
+
   useEffect(() => {
     const checkAuth = async () => {
       const session = await getSession();
       setIsAuthenticated(!!session);
+      if (session && session.user && session.user.role) {
+        setUserRole(session.user.role);
+      }
     };
     checkAuth();
   }, []);
@@ -26,15 +31,15 @@ const AdminLayout = () => {
   if (!isAuthenticated) return <Navigate to="/admin/login" replace />;
 
   const navigation = [
-    { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-    { name: 'Products', href: '/admin/products', icon: ShoppingBag },
-    { name: 'Orders', href: '/admin/orders', icon: ListOrdered },
-    { name: 'Follow-ups', href: '/admin/followups', icon: Users },
-    { name: 'Gallery', href: '/admin/gallery', icon: ImageIcon },
-    { name: 'Categories', href: '/admin/categories', icon: CheckSquare },
-    { name: 'Celebrations', href: '/admin/celebrations', icon: Gift },
-    { name: 'Settings', href: '/admin/settings', icon: Settings },
-  ];
+    { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, adminOnly: true },
+    { name: 'Products', href: '/admin/products', icon: ShoppingBag, adminOnly: false },
+    { name: 'Orders', href: '/admin/orders', icon: ListOrdered, adminOnly: true },
+    { name: 'Follow-ups', href: '/admin/followups', icon: Users, adminOnly: true },
+    { name: 'Gallery', href: '/admin/gallery', icon: ImageIcon, adminOnly: true },
+    { name: 'Categories', href: '/admin/categories', icon: CheckSquare, adminOnly: true },
+    { name: 'Celebrations', href: '/admin/celebrations', icon: Gift, adminOnly: true },
+    { name: 'Settings', href: '/admin/settings', icon: Settings, adminOnly: true },
+  ].filter(item => userRole === 'admin' || !item.adminOnly);
 
   return (
     <div className="min-h-screen bg-surface-container-low flex">
@@ -46,7 +51,9 @@ const AdminLayout = () => {
       {/* Sidebar */}
       <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-surface border-r border-outline-variant/30 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center justify-between h-16 px-6 border-b border-outline-variant/30">
-          <span className="font-headline-md text-xl font-bold text-primary">Admin Panel</span>
+          <span className="font-headline-md text-xl font-bold text-primary">
+            {userRole === 'staff' ? 'Staff Panel' : 'Admin Panel'}
+          </span>
           <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-on-surface-variant hover:text-error">
             <X size={20} />
           </button>

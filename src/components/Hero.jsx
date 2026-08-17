@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { MessageCircle, ArrowRight, Search } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.jpg';
 
 // Snowfall Component
@@ -73,6 +73,31 @@ const mobileHeroImages = [
 
 const Hero = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [trendingFlavors, setTrendingFlavors] = useState([]);
+  const navigate = useNavigate();
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/cakes?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  useEffect(() => {
+    // Fetch dynamic trending flavors
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.trendingFlavors && Array.isArray(data.trendingFlavors)) {
+          setTrendingFlavors(data.trendingFlavors);
+        } else {
+          // Fallback if settings haven't been initialized properly yet
+          setTrendingFlavors(['birthday', 'chocolate', 'bento', 'rasmalai cake', 'chocolate bar', 'black forest']);
+        }
+      })
+      .catch(err => console.error('Error fetching trending flavors:', err));
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -157,6 +182,39 @@ const Hero = () => {
               <MessageCircle size={20} className="text-green-400" />
               <span>WhatsApp Order</span>
             </a>
+          </motion.div>
+
+          {/* Search Bar & Trending */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.6 }}
+            className="w-full max-w-xl mb-12"
+          >
+            <form onSubmit={handleSearch} className="relative w-full mb-4">
+              <input 
+                type="text" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search cakes, flavors, occasions..." 
+                className="w-full bg-[#201026]/80 border border-white/20 text-white rounded-full py-4 pl-6 pr-12 focus:outline-none focus:border-[#FACC15] transition-colors placeholder:text-[#887890]"
+              />
+              <button type="submit" className="absolute right-4 top-1/2 -translate-y-1/2 text-[#887890] hover:text-[#FACC15] transition-colors">
+                <Search size={20} />
+              </button>
+            </form>
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 whitespace-nowrap">
+              <span className="text-[#887890] text-sm font-medium mr-1 shrink-0">Trending:</span>
+              {trendingFlavors.map(flavor => (
+                <button
+                  key={flavor}
+                  onClick={() => navigate(`/cakes?q=${encodeURIComponent(flavor)}`)}
+                  className="px-3 py-1 bg-[#4A1646] hover:bg-[#681E61] text-[#F9A8D4] border border-[#701A75]/50 text-xs font-medium rounded-full transition-colors cursor-pointer capitalize shrink-0"
+                >
+                  {flavor}
+                </button>
+              ))}
+            </div>
           </motion.div>
 
           {/* Feature Badges - Placed here for Desktop, hidden on Mobile to display below cake */}

@@ -53,7 +53,10 @@ const defaultData = {
     { id: "6", imageUrl: 'https://images.unsplash.com/photo-1562777717-dc6984f65a63?auto=format&fit=crop&q=80&w=800', altText: 'Custom photo cake', createdAt: new Date().toISOString() },
     { id: "7", imageUrl: 'https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&q=80&w=800', altText: 'Kids birthday cake', createdAt: new Date().toISOString() },
     { id: "8", imageUrl: 'https://images.unsplash.com/photo-1621236378699-8597faf6a176?auto=format&fit=crop&q=80&w=800', altText: 'Premium design cake', createdAt: new Date().toISOString() }
-  ]
+  ],
+  settings: {
+    trendingFlavors: ['birthday', 'chocolate', 'bento', 'rasmalai cake', 'chocolate bar', 'black forest', 'red velvet', 'butterscotch', 'vanilla', 'strawberry']
+  }
 };
 
 if (!fs.existsSync(dbPath)) {
@@ -81,6 +84,7 @@ const db = {
         const data = loadData();
         if (sql.includes('FROM products')) return data.products || [];
         if (sql.includes('FROM orders')) return data.orders || [];
+        if (sql.includes('FROM settings')) return data.settings || { trendingFlavors: [] };
         if (sql.includes('FROM celebrations')) return data.celebrations || [];
         if (sql.includes('FROM gallery')) {
           const gallery = data.gallery || [];
@@ -117,6 +121,8 @@ const db = {
               data[tableName].push(params);
             }
           }
+        } else if (sql.includes('UPDATE settings')) {
+          data.settings = { ...data.settings, ...params };
         }
         
         saveData(data);

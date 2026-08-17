@@ -28,6 +28,7 @@ import Orders from './pages/admin/Orders';
 import FollowUps from './pages/admin/FollowUps';
 import Celebrations from './pages/admin/Celebrations';
 import GalleryAdmin from './pages/admin/GalleryAdmin';
+import Settings from './pages/admin/Settings';
 
 const StorefrontLayout = () => (
   <div className="flex flex-col min-h-screen">
@@ -81,7 +82,7 @@ function App() {
             <Route path="gallery" element={<GalleryAdmin />} />
             <Route path="celebrations" element={<Celebrations />} />
             <Route path="categories" element={<div className="p-8">Categories Management Coming Soon</div>} />
-            <Route path="settings" element={<div className="p-8">Settings Coming Soon</div>} />
+            <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>
       </Router>

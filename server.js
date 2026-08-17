@@ -38,12 +38,16 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'cakesnowbakery@gmail.com';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'cakesnowbakery@@2026';
+const STAFF_EMAIL = 'staff@cakesnow.com';
+const STAFF_PASSWORD = 'staff123';
 const ADMIN_TOKEN = 'secure-admin-token-' + Date.now(); 
 
 app.post('/api/login', (req, res) => {
   const { email, password } = req.body;
   if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-    res.json({ success: true, token: ADMIN_TOKEN, user: { email } });
+    res.json({ success: true, token: ADMIN_TOKEN, user: { email, role: 'admin' } });
+  } else if (email === STAFF_EMAIL && password === STAFF_PASSWORD) {
+    res.json({ success: true, token: ADMIN_TOKEN, user: { email, role: 'staff' } });
   } else {
     res.status(401).json({ success: false, error: 'Invalid credentials' });
   }
@@ -213,6 +217,26 @@ app.post('/api/celebrations', (req, res) => {
 app.delete('/api/celebrations/:id', (req, res) => {
   try {
     db.prepare('DELETE FROM celebrations WHERE id = ?').run(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Settings
+app.get('/api/settings', (req, res) => {
+  try {
+    const settings = db.prepare('SELECT * FROM settings').all();
+    res.json(settings);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/settings', (req, res) => {
+  try {
+    const settings = req.body;
+    db.prepare('UPDATE settings').run(settings);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });

@@ -238,7 +238,8 @@ const Home = () => {
             </div>
             </ScrollReveal>
 
-            <div className="flex overflow-x-auto pb-4 snap-x snap-mandatory hide-scrollbar md:grid md:grid-cols-4 gap-4 md:gap-6">
+            <ScrollReveal animation="fadeUp" delay={200}>
+              <div className="flex overflow-x-auto pb-4 snap-x snap-mandatory hide-scrollbar md:grid md:grid-cols-4 gap-4 md:gap-6">
               {bestSellersData.map((cake) => (
                 <div key={cake.id} className="min-w-[240px] md:min-w-0 snap-center bg-white dark:bg-[#1D0A2D] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-[#EAC2BB]/20 dark:border-[#D4AF37]/20 group cursor-pointer" onClick={() => handleAddToCartClick(cake)}>
                   <div className="aspect-[4/3] w-full overflow-hidden bg-[#f9f5ed] dark:bg-[#12041C]">
@@ -256,7 +257,8 @@ const Home = () => {
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+            </ScrollReveal>
             <Link to="/menu" className="text-sm font-medium text-[#D4AF37] block text-center mt-4 md:hidden">View All</Link>
           </div>
         </section>

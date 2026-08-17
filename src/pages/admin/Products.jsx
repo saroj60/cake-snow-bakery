@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Search, X } from 'lucide-react';
-import { getProducts, saveProduct, deleteProduct, uploadImage } from '../../services/db';
+import { getProducts, saveProduct, deleteProduct, uploadImage, getSession } from '../../services/db';
 
 const Products = () => {
   const [products, setProducts] = useState([]);
+  const [userRole, setUserRole] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -33,7 +34,14 @@ const Products = () => {
   };
 
   useEffect(() => {
-    fetchProducts();
+    const init = async () => {
+      const session = await getSession();
+      if (session && session.user && session.user.role) {
+        setUserRole(session.user.role);
+      }
+      fetchProducts();
+    };
+    init();
   }, []);
 
   const handleOpenModal = (product = null) => {
@@ -52,7 +60,7 @@ const Products = () => {
         image: '',
         category: 'Cakes',
         occasion: 'General / Any',
-        isActive: true,
+        isActive: userRole === 'admin',
         isPerLb: false,
         isBestSeller: false
       });
@@ -77,7 +85,8 @@ const Products = () => {
       const productToSave = {
         ...formData,
         image: finalImageUrl,
-        price: parseFloat(formData.price)
+        price: userRole === 'staff' ? 0 : parseFloat(formData.price || 0),
+        isActive: userRole === 'staff' ? false : formData.isActive
       };
       await saveProduct(productToSave);
       await fetchProducts();
@@ -156,7 +165,7 @@ const Products = () => {
                   <th className="px-4 py-3 font-medium">Category</th>
                   <th className="px-4 py-3 font-medium">Price</th>
                   <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium text-right">Actions</th>
+                  {userRole === 'admin' && <th className="px-4 py-3 font-medium text-right">Actions</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant/20">
@@ -181,18 +190,20 @@ const Products = () => {
                         Rs. {product.price.toFixed(2)} {product.isPerLb && <span className="text-xs text-on-surface-variant font-normal">/ lb</span>}
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${product.isActive ? 'bg-green-100 text-green-700' : 'bg-surface-dim text-on-surface-variant'}`}>
-                          {product.isActive ? 'Active' : 'Draft'}
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${product.isActive ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                          {product.isActive ? 'Active' : 'Pending Approval'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <button onClick={() => handleOpenModal(product)} className="p-1 text-on-surface-variant hover:text-primary transition-colors mr-2">
-                          <Edit2 size={18} />
-                        </button>
-                        <button onClick={() => handleDelete(product.id)} className="p-1 text-on-surface-variant hover:text-error transition-colors">
-                          <Trash2 size={18} />
-                        </button>
-                      </td>
+                      {userRole === 'admin' && (
+                        <td className="px-4 py-3 text-right">
+                          <button onClick={() => handleOpenModal(product)} className="p-1 text-on-surface-variant hover:text-primary transition-colors mr-2">
+                            <Edit2 size={18} />
+                          </button>
+                          <button onClick={() => handleDelete(product.id)} className="p-1 text-on-surface-variant hover:text-error transition-colors">
+                            <Trash2 size={18} />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}
@@ -259,26 +270,29 @@ const Products = () => {
                       <option value="Buying a new home">Buying a new home</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1 text-on-surface">Price (Rs.) *</label>
-                    <div className="flex items-center gap-4">
-                      <input 
-                        type="number" step="0.01" min="0" required
-                        value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})}
-                        className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface focus:ring-2 focus:ring-primary outline-none"
-                      />
-                      <label className="flex items-center cursor-pointer whitespace-nowrap">
+                  {userRole === 'admin' && (
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-on-surface">Price (Rs.) *</label>
+                      <div className="flex items-center gap-4">
                         <input 
-                          type="checkbox" 
-                          checked={formData.isPerLb || false} 
-                          onChange={e => setFormData({...formData, isPerLb: e.target.checked})}
-                          className="mr-2 accent-primary w-4 h-4 rounded border-outline-variant"
+                          type="number" step="0.01" min="0" required={userRole === 'admin'}
+                          value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})}
+                          className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface focus:ring-2 focus:ring-primary outline-none"
                         />
-                        <span className="text-sm font-medium text-on-surface">Per lb</span>
-                      </label>
+                        <label className="flex items-center cursor-pointer whitespace-nowrap">
+                          <input 
+                            type="checkbox" 
+                            checked={formData.isPerLb || false} 
+                            onChange={e => setFormData({...formData, isPerLb: e.target.checked})}
+                            className="mr-2 accent-primary w-4 h-4 rounded border-outline-variant"
+                          />
+                          <span className="text-sm font-medium text-on-surface">Per lb</span>
+                        </label>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-6 pt-6">
+                  )}
+                  {userRole === 'admin' && (
+                    <div className="flex items-center gap-6 pt-6">
                     <label className="flex items-center cursor-pointer">
                       <input 
                         type="checkbox" 
@@ -301,6 +315,7 @@ const Products = () => {
                       <span className="ml-3 text-sm font-medium text-on-surface">Best Seller</span>
                     </label>
                   </div>
+                  )}
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium mb-1 text-on-surface">Product Image</label>
                     <div className="flex gap-4 items-center bg-surface-container-low p-3 rounded-xl border border-outline-variant/30">

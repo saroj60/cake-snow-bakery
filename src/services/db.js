@@ -12,6 +12,7 @@ export const login = async (email, password) => {
     if (data.success) {
       sessionStorage.setItem('admin_token', data.token);
       sessionStorage.setItem('admin_email', data.user.email);
+      sessionStorage.setItem('admin_role', data.user.role);
       return { user: data.user, error: null };
     }
     return { user: null, error: data.error };
@@ -23,12 +24,14 @@ export const login = async (email, password) => {
 export const logout = async () => {
   sessionStorage.removeItem('admin_token');
   sessionStorage.removeItem('admin_email');
+  sessionStorage.removeItem('admin_role');
 };
 
 export const getSession = async () => {
   const token = sessionStorage.getItem('admin_token');
   const email = sessionStorage.getItem('admin_email');
-  return token && email ? { user: { email } } : null;
+  const role = sessionStorage.getItem('admin_role');
+  return token && email ? { user: { email, role } } : null;
 };
 
 // Generic REST Helpers
