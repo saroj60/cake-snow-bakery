@@ -167,7 +167,9 @@ const Orders = () => {
                           <div className="flex justify-between items-start">
                             <div className="flex gap-2 items-start">
                               {item.image ? (
-                                <img src={item.image} alt={item.name} className="w-10 h-10 object-cover rounded bg-surface-variant flex-shrink-0" />
+                                <a href={item.image} target="_blank" rel="noreferrer" title="Click to view full size" className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
+                                  <img src={item.image} alt={item.name} className="w-10 h-10 object-cover rounded bg-surface-variant" />
+                                </a>
                               ) : (
                                 <div className="w-10 h-10 bg-surface-variant rounded flex-shrink-0"></div>
                               )}
